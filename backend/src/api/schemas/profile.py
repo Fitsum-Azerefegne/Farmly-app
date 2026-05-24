@@ -31,15 +31,12 @@ class OnboardingCompleteRequest(BaseModel):
     user_type: UserType
     years_experience: int = Field(ge=0, le=80)
     main_goal: MainGoal
-    crops_grown: list[str] = Field(min_length=1, max_length=30)
+    crops_grown: list[str] = Field(default=[], max_length=30)
 
     @field_validator("crops_grown")
     @classmethod
     def validate_crops(cls, value: list[str]) -> list[str]:
-        normalized = _normalize_crops(value)
-        if not normalized:
-            raise ValueError("At least one crop is required")
-        return normalized
+        return _normalize_crops(value)
 
 
 class ProfileUpdateRequest(BaseModel):

@@ -1,32 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import 'presentation/features/auth/cubit/auth_cubit.dart';
-import 'presentation/features/onboarding/cubit/onboarding_cubit.dart';
-import 'presentation/features/onboarding/pages/landing_page.dart';
+import 'presentation/features/onboarding/pages/splash_page.dart';
+import 'app/theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FarmlyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class FarmlyApp extends StatelessWidget {
+  const FarmlyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) => OnboardingCubit(),
-        ),
-        BlocProvider(
-          create: (_) => AuthCubit(),
-        ),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: const LandingPage(),
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Farmly',
+      theme: AppTheme.light(),
+      home: const SplashPage(),
     );
   }
 }

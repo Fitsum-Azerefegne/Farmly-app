@@ -16,6 +16,9 @@ from src.api.schemas.auth import (
     SetPasswordRequest,
     UserResponse,
     VerifyOTPRequest,
+    ForgotPasswordOTPRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from src.auth.dependencies import get_current_user
 from src.auth.jwt_utils import create_access_token, decode_access_token
@@ -224,7 +227,6 @@ def set_password(payload: SetPasswordRequest, db: Session = Depends(get_db)) -> 
         user=_to_user_response(user),
     )
 
-
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
     try:
@@ -426,3 +428,77 @@ def confirm_phone_change(
         message="Phone number changed successfully",
         phone_number=current_user.phone_number,
     )
+
+
+@router.post("/forgot-password/request-otp", response_model=OTPRequestedResponse)
+def forgot_password_request_otp(
+    payload: ForgotPasswordOTPRequest,
+    db: Session = Depends(get_db),
+) -> OTPRequestedResponse:
+    try:
+        phone_number = normalize_phone(payload.phone_number)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    user = db.query(User).filter(User.phone_number == phone_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found with this phone number")
+
+    db.query(OTPVerification).filter(
+        OTPVerification.phone_number == phone_number,
+        OTPVerification.consumed.is_(False),
+    ).update({OTPVerification.consumed: True}, synchronize_session=False)
+
+    otp_code = generate_otp_code()
+    verification = OTPVerification(
+        phone_number=phone_number,
+        full_name=user.profile.full_name if user.profile else "",
+        otp_code_hash=hash_otp(phone_number, otp_code),
+        expires_at=otp_expiry_time(),
+        max_attempts=settings.otp_max_attempts,
+    )
+    db.add(verification)
+    db.commit()
+
+    sms_text = f"Farmly password reset code: {otp_code}. Expires in {settings.otp_expire_minutes} minutes."
+    debug_otp: str | None = None
+    try:
+        send_sms(phone_number, sms_text)
+    except Exception as exc:
+        if settings.debug:
+            debug_otp = otp_code
+        else:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Failed to send SMS: {exc}")
+
+    if settings.debug and debug_otp is None:
+        debug_otp = otp_code
+
+    return OTPRequestedResponse(
+        message="Password reset OTP sent",
+        expires_in_minutes=settings.otp_expire_minutes,
+        debug_otp=debug_otp,
+    )
+
+
+@router.post("/forgot-password/reset", response_model=ResetPasswordResponse)
+def reset_password(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ResetPasswordResponse:
+    try:
+        phone_number = normalize_phone(payload.phone_number)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    token_payload = decode_access_token(payload.reset_token)
+    if token_payload is None or token_payload.get("sub") != phone_number:
+        raise HTTPException(status_code=401, detail="Invalid or expired reset token")
+
+    user = db.query(User).filter(User.phone_number == phone_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    return ResetPasswordResponse(message="Password reset successfully")

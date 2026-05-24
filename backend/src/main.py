@@ -11,7 +11,7 @@ from src.api.routes.recommendation import router as recommendation_router
 from src.config.settings import get_settings
 from src.db.base import Base
 from src.db.session import engine
-from src.db import models 
+from src.db import models
 
 
 settings = get_settings()

@@ -3,40 +3,31 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/auth_button.dart';
-import '../widgets/auth_footer.dart';
-import '../../onboarding/pages/profile_setup_page.dart';
 import 'login_page.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   int _step = 1;
 
-  // step 1
-  final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-
-  // step 2
   final _otpController = TextEditingController();
-  String? _debugOtp;
-
-  // step 3
-  final _passwordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
   final _confirmController = TextEditingController();
-  bool _obscurePassword = true;
+
+  bool _obscureNew = true;
   bool _obscureConfirm = true;
-
   bool _isLoading = false;
+  bool _success = false;
   String? _errorMessage;
+  String? _resetToken;
+  String? _debugOtp;
   String _fullPhone = '';
-  String? _setupToken;
-
-  // ── helpers ──────────────────────────────────────────────
 
   String _formatLocal(String input) {
     final digits = input.replaceAll(RegExp(r'[^0-9]'), '');
@@ -72,15 +63,8 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_errorMessage != null) setState(() => _errorMessage = null);
   }
 
-  // ── step 1: request OTP ──────────────────────────────────
-
   Future<void> _requestOtp() async {
-    final name = _nameController.text.trim();
     final digits = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (name.length < 2) {
-      setState(() => _errorMessage = 'Please enter your full name.');
-      return;
-    }
     if (digits.length != 8) {
       setState(() => _errorMessage = 'Please enter a valid 8-digit phone number.');
       return;
@@ -88,10 +72,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _fullPhone = '2519$digits';
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
-      final resp = await _post('/api/auth/request-otp', {
-        'full_name': name,
-        'phone_number': _fullPhone,
-      });
+      final resp = await _post(
+          '/api/auth/forgot-password/request-otp', {'phone_number': _fullPhone});
       if (!mounted) return;
       if (resp == null) {
         setState(() => _errorMessage = 'Unable to reach server. Please try again.');
@@ -99,20 +81,14 @@ class _RegisterPageState extends State<RegisterPage> {
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body);
-        setState(() {
-          _debugOtp = data['debug_otp'];
-          _step = 2;
-          _errorMessage = null;
-        });
+        setState(() { _debugOtp = data['debug_otp']; _step = 2; _errorMessage = null; });
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Failed to send OTP.'));
+        setState(() => _errorMessage = _extractError(resp, 'No account found with this number.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // ── step 2: verify OTP ───────────────────────────────────
 
   Future<void> _verifyOtp() async {
     if (_otpController.text.trim().length < 4) {
@@ -132,11 +108,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body);
-        setState(() {
-          _setupToken = data['setup_token'];
-          _step = 3;
-          _errorMessage = null;
-        });
+        setState(() { _resetToken = data['setup_token']; _step = 3; _errorMessage = null; });
       } else {
         setState(() => _errorMessage = _extractError(resp, 'Invalid or expired OTP.'));
       }
@@ -145,23 +117,21 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // ── step 3: set password ─────────────────────────────────
-
-  Future<void> _setPassword() async {
-    if (_passwordController.text.length < 8) {
+  Future<void> _resetPassword() async {
+    if (_newPasswordController.text.length < 8) {
       setState(() => _errorMessage = 'Password must be at least 8 characters.');
       return;
     }
-    if (_passwordController.text != _confirmController.text) {
+    if (_newPasswordController.text != _confirmController.text) {
       setState(() => _errorMessage = 'Passwords do not match.');
       return;
     }
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
-      final resp = await _post('/api/auth/set-password', {
+      final resp = await _post('/api/auth/forgot-password/reset', {
         'phone_number': _fullPhone,
-        'setup_token': _setupToken,
-        'password': _passwordController.text,
+        'reset_token': _resetToken,
+        'new_password': _newPasswordController.text,
       });
       if (!mounted) return;
       if (resp == null) {
@@ -169,27 +139,15 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final data = jsonDecode(resp.body);
-        final token = data['access_token'] as String;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProfileSetupPage(
-              accessToken: token,
-              fullName: _nameController.text.trim(),
-              phoneNumber: _fullPhone,
-            ),
-          ),
-        );
+        if (!mounted) return;
+        setState(() => _success = true);
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Failed to create account.'));
+        setState(() => _errorMessage = _extractError(resp, 'Failed to reset password.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // ── build ────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -233,62 +191,15 @@ class _RegisterPageState extends State<RegisterPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    if (_success) ..._successView(),
+
+                    if (!_success) ...[
                     _stepIndicator(),
                     const SizedBox(height: 24),
 
                     if (_step == 1) ..._stepOne(),
                     if (_step == 2) ..._stepTwo(),
-
-                    // step 3 — kept in tree always to preserve TextField state
-                    Visibility(
-                      visible: _step == 3,
-                      maintainState: true,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Set your password',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  color: AppColors.darkPrimary,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 8),
-                          const Text('Choose a strong password for your account.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: AppColors.muted)),
-                          const SizedBox(height: 24),
-                          TextField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: 'Password',
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility),
-                                onPressed: () => setState(
-                                    () => _obscurePassword = !_obscurePassword),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          TextField(
-                            controller: _confirmController,
-                            obscureText: _obscureConfirm,
-                            decoration: InputDecoration(
-                              hintText: 'Confirm password',
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscureConfirm
-                                    ? Icons.visibility_off
-                                    : Icons.visibility),
-                                onPressed: () => setState(
-                                    () => _obscureConfirm = !_obscureConfirm),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    if (_step == 3) ..._stepThree(),
 
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
@@ -316,23 +227,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ? 'Send Code'
                                 : _step == 2
                                     ? 'Verify Code'
-                                    : 'Create Account',
+                                    : 'Reset Password',
                             onPressed: _step == 1
                                 ? _requestOtp
                                 : _step == 2
                                     ? _verifyOtp
-                                    : _setPassword,
+                                    : _resetPassword,
                           ),
-                    const SizedBox(height: 16),
-                    if (_step == 1)
-                      AuthFooter(
-                        text: 'Already have an account? ',
-                        actionText: 'Login',
-                        onTap: () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        ),
-                      ),
+                    ],
                   ],
                 ),
               ),
@@ -368,23 +270,17 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   List<Widget> _stepOne() => [
-        const Text('Create account',
+        const Text('Forgot Password?',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: AppColors.darkPrimary,
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
-        const Text('Join Farmly in seconds.',
+        const Text("Enter your phone number and we'll send a reset code.",
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.muted)),
         const SizedBox(height: 24),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(hintText: 'Full name'),
-          onChanged: (_) => _clearError(),
-        ),
-        const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -425,7 +321,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ];
 
   List<Widget> _stepTwo() => [
-        const Text('Verify your number',
+        const Text('Enter the Code',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: AppColors.darkPrimary,
@@ -481,5 +377,75 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ];
 
+  List<Widget> _successView() => [
+        const SizedBox(height: 8),
+        Container(
+          width: 72,
+          height: 72,
+          decoration: const BoxDecoration(
+            color: Color(0xFFE8F5E9),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check_rounded, color: AppColors.primary, size: 40),
+        ),
+        const SizedBox(height: 20),
+        const Text('Password Reset!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: AppColors.darkPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        const Text('Your password has been changed successfully.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.muted)),
+        const SizedBox(height: 28),
+        AuthButton(
+          text: 'Go to Login',
+          onPressed: () => Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+            (_) => false,
+          ),
+        ),
+      ];
 
+  List<Widget> _stepThree() => [
+        const Text('New Password',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: AppColors.darkPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        const Text('Choose a strong new password.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.muted)),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _newPasswordController,
+          obscureText: _obscureNew,
+          decoration: InputDecoration(
+            hintText: 'New password',
+            suffixIcon: IconButton(
+              icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscureNew = !_obscureNew),
+            ),
+          ),
+          onChanged: (_) => _clearError(),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _confirmController,
+          obscureText: _obscureConfirm,
+          decoration: InputDecoration(
+            hintText: 'Confirm new password',
+            suffixIcon: IconButton(
+              icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+            ),
+          ),
+          onChanged: (_) => _clearError(),
+        ),
+      ];
 }

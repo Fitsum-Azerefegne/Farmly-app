@@ -4,10 +4,12 @@ class AuthInitial extends AuthState {}
 
 class AuthLoading extends AuthState {}
 
-class AuthSuccess extends AuthState {}
+class LoginSuccess extends AuthState {}
 
-class AuthError extends AuthState {
+class RegisterSuccess extends AuthState {}
+
+class AuthFailure extends AuthState {
   final String message;
 
-  AuthError({required this.message});
+  AuthFailure(this.message);
 }

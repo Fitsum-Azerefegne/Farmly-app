@@ -1,6 +1,9 @@
-venv/
+.venv/
 .env
-__pycache__
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
 *.db
 
 .dart_tool/
@@ -15,4 +18,9 @@ build/
 .flutter-plugins-dependencies
 .flutter-versions
 .packages
+*.g.dart
 
+android/local.properties
+android/key.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
