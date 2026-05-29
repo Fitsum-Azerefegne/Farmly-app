@@ -12,6 +12,7 @@ dependencies:
 
   flutter_bloc: ^8.1.6
   equatable: ^2.0.5
+  geolocator: ^13.0.2
   http: ^0.13.6
   http_parser: ^4.0.2
   image_picker: ^1.1.2
