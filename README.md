@@ -2,7 +2,21 @@
 
 Farmly is a farming assistant with a FastAPI backend, a Flutter app, voice input/output, crop advice, and a local sorghum disease model.
 
-The Android APK can be downloaded from the project's GitHub Releases page.
+## Download the App
+
+The Android APK is available from the project's GitHub Releases page:
+
+```text
+https://github.com/Fitsum-Azerefegne/Farmly-app/releases
+```
+
+## Hosted Backend
+
+The production backend is hosted at:
+
+```text
+https://farmlyapi.birukabza.me
+```
 
 ## Project Structure
 
@@ -122,36 +136,6 @@ Run Android/real device against hosted backend:
 flutter run --dart-define=API_BASE_URL=https://farmlyapi.birukabza.me
 ```
 
-## Build APK
-
-If the Android platform folder does not exist yet:
-
-```powershell
-cd mobile
-flutter create --platforms=android .
-```
-
-Add location permissions to `mobile/android/app/src/main/AndroidManifest.xml` inside `<manifest>`:
-
-```xml
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-```
-
-Build release APK:
-
-```powershell
-cd mobile
-flutter pub get
-flutter build apk --release --dart-define=API_BASE_URL=https://farmlyapi.birukabza.me
-```
-
-Output:
-
-```text
-mobile/build/app/outputs/flutter-apk/app-release.apk
-```
-
 ## Features
 
 - Phone OTP registration and password login
@@ -163,11 +147,3 @@ mobile/build/app/outputs/flutter-apk/app-release.apk
 - Voice playback for assistant responses
 - Sorghum disease diagnosis through the local `.pt` model
 - Crop, fertilizer, weather, and soil-aware recommendations
-
-## Hosted Backend
-
-The production backend is hosted at:
-
-```text
-https://farmlyapi.birukabza.me
-```
