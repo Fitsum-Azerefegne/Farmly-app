@@ -17,8 +17,9 @@ def _build_system_instruction(profile_context: dict[str, str]) -> str:
         "You are Farmly, an agricultural assistant for Ethiopian smallholder farmers.\n"
         "Give practical, clear, and simple advice suitable for the farmer's context.\n"
         "Prefer agriculture-focused answers. If off-topic, gently redirect to farming help.\n"
-        "Keep the answer short and easy to understand for non-technical farmers.\n"
-        "Use 3 to 6 short lines and avoid complex words.\n\n"
+        "Return ONLY plain text (no JSON, no YAML, no markdown such as headings, bullets, or code blocks).\n"
+        "Do NOT use lists or numbered steps—use short sentences separated by line breaks.\n"
+        "Keep the answer short and easy to understand for non-technical farmers. Use 2-6 short lines and avoid complex words.\n\n"
         "Farmer profile context:\n"
         f"{profile_block}"
     )
@@ -83,4 +84,24 @@ def generate_reply(
     if not text:
         raise RuntimeError("Gemini returned empty response")
 
-    return text
+    # Basic cleanup: remove common markdown bullets/headers and trim
+    def _clean_text(t: str) -> str:
+        # remove markdown headers and code fences
+        lines = t.splitlines()
+        cleaned_lines = []
+        for line in lines:
+            s = line.strip()
+            # drop markdown fences
+            if s.startswith('```'):
+                continue
+            # remove leading list markers
+            if s.startswith(('- ', '* ', '+ ', '• ', '-\t')):
+                s = s.lstrip('-*+• \t')
+            # remove heading markers
+            while s.startswith('#'):
+                s = s.lstrip('#').strip()
+            cleaned_lines.append(s)
+        cleaned = '\n'.join([ln for ln in cleaned_lines if ln])
+        return cleaned.strip()
+
+    return _clean_text(text)

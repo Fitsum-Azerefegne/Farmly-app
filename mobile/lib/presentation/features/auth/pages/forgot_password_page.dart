@@ -66,24 +66,34 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Future<void> _requestOtp() async {
     final digits = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length != 8) {
-      setState(() => _errorMessage = 'Please enter a valid 8-digit phone number.');
+      setState(
+          () => _errorMessage = 'Please enter a valid 8-digit phone number.');
       return;
     }
     _fullPhone = '2519$digits';
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      final resp = await _post(
-          '/api/auth/forgot-password/request-otp', {'phone_number': _fullPhone});
+      final resp = await _post('/api/auth/forgot-password/request-otp',
+          {'phone_number': _fullPhone});
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body);
-        setState(() { _debugOtp = data['debug_otp']; _step = 2; _errorMessage = null; });
+        setState(() {
+          _debugOtp = data['debug_otp'];
+          _step = 2;
+          _errorMessage = null;
+        });
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'No account found with this number.'));
+        setState(() => _errorMessage =
+            _extractError(resp, 'No account found with this number.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -95,7 +105,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       setState(() => _errorMessage = 'Please enter the OTP code.');
       return;
     }
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final resp = await _post('/api/auth/verify-otp', {
         'phone_number': _fullPhone,
@@ -103,14 +116,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body);
-        setState(() { _resetToken = data['setup_token']; _step = 3; _errorMessage = null; });
+        setState(() {
+          _resetToken = data['setup_token'];
+          _step = 3;
+          _errorMessage = null;
+        });
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Invalid or expired OTP.'));
+        setState(() =>
+            _errorMessage = _extractError(resp, 'Invalid or expired OTP.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -126,7 +145,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       setState(() => _errorMessage = 'Passwords do not match.');
       return;
     }
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final resp = await _post('/api/auth/forgot-password/reset', {
         'phone_number': _fullPhone,
@@ -135,14 +157,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       });
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         if (!mounted) return;
         setState(() => _success = true);
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Failed to reset password.'));
+        setState(() =>
+            _errorMessage = _extractError(resp, 'Failed to reset password.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -160,7 +184,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           icon: const Icon(Icons.arrow_back, color: AppColors.darkPrimary),
           onPressed: () {
             if (_step > 1) {
-              setState(() { _step--; _errorMessage = null; });
+              setState(() {
+                _step--;
+                _errorMessage = null;
+              });
             } else {
               Navigator.pop(context);
             }
@@ -192,48 +219,46 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (_success) ..._successView(),
-
                     if (!_success) ...[
-                    _stepIndicator(),
-                    const SizedBox(height: 24),
-
-                    if (_step == 1) ..._stepOne(),
-                    if (_step == 2) ..._stepTwo(),
-                    if (_step == 3) ..._stepThree(),
-
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 16),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(_errorMessage!,
-                                style: const TextStyle(color: Colors.red, fontSize: 13)),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-
-                    _isLoading
-                        ? const SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        : AuthButton(
-                            text: _step == 1
-                                ? 'Send Code'
-                                : _step == 2
-                                    ? 'Verify Code'
-                                    : 'Reset Password',
-                            onPressed: _step == 1
-                                ? _requestOtp
-                                : _step == 2
-                                    ? _verifyOtp
-                                    : _resetPassword,
-                          ),
+                      _stepIndicator(),
+                      const SizedBox(height: 24),
+                      if (_step == 1) ..._stepOne(),
+                      if (_step == 2) ..._stepTwo(),
+                      if (_step == 3) ..._stepThree(),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(_errorMessage!,
+                                  style: const TextStyle(
+                                      color: Colors.red, fontSize: 13)),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      _isLoading
+                          ? const SizedBox(
+                              width: double.infinity,
+                              height: 56,
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          : AuthButton(
+                              text: _step == 1
+                                  ? 'Send Code'
+                                  : _step == 2
+                                      ? 'Verify Code'
+                                      : 'Reset Password',
+                              onPressed: _step == 1
+                                  ? _requestOtp
+                                  : _step == 2
+                                      ? _verifyOtp
+                                      : _resetPassword,
+                            ),
                     ],
                   ],
                 ),
@@ -258,7 +283,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               width: active ? 28 : 10,
               height: 10,
               decoration: BoxDecoration(
-                color: (active || done) ? AppColors.primary : Colors.grey.shade300,
+                color:
+                    (active || done) ? AppColors.primary : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(5),
               ),
             ),
@@ -290,9 +316,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 child: const Text('+2519',
-                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: Colors.black87, fontWeight: FontWeight.w600)),
               ),
               Expanded(
                 child: TextField(
@@ -301,14 +329,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   decoration: const InputDecoration(
                     hintText: '0000-0000',
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
                   onChanged: (v) {
                     final formatted = _formatLocal(v);
                     if (formatted != _phoneController.text) {
                       _phoneController.value = TextEditingValue(
                         text: formatted,
-                        selection: TextSelection.collapsed(offset: formatted.length),
+                        selection:
+                            TextSelection.collapsed(offset: formatted.length),
                       );
                     }
                     _clearError();
@@ -343,7 +373,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.bug_report, size: 14, color: Color(0xFFF57F17)),
+                const Icon(Icons.bug_report,
+                    size: 14, color: Color(0xFFF57F17)),
                 const SizedBox(width: 6),
                 Text('Dev OTP: $_debugOtp',
                     style: const TextStyle(
@@ -365,7 +396,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           decoration: InputDecoration(
             counterText: '',
             hintText: '------',
-            hintStyle: TextStyle(letterSpacing: 10, color: Colors.grey.shade400),
+            hintStyle:
+                TextStyle(letterSpacing: 10, color: Colors.grey.shade400),
           ),
           onChanged: (_) => _clearError(),
         ),
@@ -373,7 +405,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         TextButton(
           onPressed: _isLoading ? null : _requestOtp,
           child: const Text('Resend code',
-              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w600)),
         ),
       ];
 
@@ -386,7 +419,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             color: Color(0xFFE8F5E9),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check_rounded, color: AppColors.primary, size: 40),
+          child: const Icon(Icons.check_rounded,
+              color: AppColors.primary, size: 40),
         ),
         const SizedBox(height: 20),
         const Text('Password Reset!',
@@ -441,8 +475,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           decoration: InputDecoration(
             hintText: 'Confirm new password',
             suffixIcon: IconButton(
-              icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+              icon: Icon(
+                  _obscureConfirm ? Icons.visibility_off : Icons.visibility),
+              onPressed: () =>
+                  setState(() => _obscureConfirm = !_obscureConfirm),
             ),
           ),
           onChanged: (_) => _clearError(),

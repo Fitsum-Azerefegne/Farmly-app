@@ -1,4 +1,5 @@
 from typing import Any, TypedDict
+import logging
 
 from langgraph.graph import END, StateGraph
 from sqlalchemy.orm import Session
@@ -116,7 +117,30 @@ def run_chat_orchestrator(
                     recent_messages=recent_messages,
                     profile_context=profile_context,
                 )
-        except Exception:
+        except Exception as exc:
+            # log for diagnostics
+            logging.exception("Orchestrator execute_node error")
+            # try best-effort service fallbacks depending on route
+            try:
+                if route == "crop_recommendation" and profile:
+                    result = run_crop_recommendation(profile, recent_messages=recent_messages)
+                    s["result_text"] = result.get("recommendation_text")
+                    return s
+                if route == "fertilizer_recommendation" and profile:
+                    result = run_fertilizer_recommendation(profile, recent_messages=recent_messages)
+                    s["result_text"] = result.get("recommendation_text")
+                    return s
+                if route == "weather_recommendation" and profile:
+                    result = run_weather_recommendation(profile, recent_messages=recent_messages)
+                    s["result_text"] = result.get("recommendation_text")
+                    return s
+                if route == "disease_diagnosis" and profile and image_bytes:
+                    diagnosis = run_diagnosis(profile, image_bytes, recent_messages=recent_messages)
+                    s["result_text"] = diagnosis.advice_text
+                    return s
+            except Exception:
+                logging.exception("Fallback service also failed")
+
             fallback = s["message"].strip()[:120]
             s["result_text"] = (
                 "I received your request and prepared a basic response.\n"

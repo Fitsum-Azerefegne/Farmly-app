@@ -21,6 +21,7 @@ from src.api.schemas.auth import (
     ResetPasswordResponse,
 )
 from src.auth.dependencies import get_current_user
+# translations removed: inlining English messages directly
 from src.auth.jwt_utils import create_access_token, decode_access_token
 from src.auth.otp_utils import generate_otp_code, hash_otp, otp_expiry_time, verify_otp_hash
 from src.auth.password import hash_password, verify_password
@@ -347,7 +348,7 @@ def request_phone_change(
         debug_otp = otp_code
 
     return PhoneChangeRequestedResponse(
-        message="Phone change OTP sent successfully",
+        message="Phone change OTP sent",
         expires_in_minutes=settings.otp_expire_minutes,
         debug_otp=debug_otp,
     )

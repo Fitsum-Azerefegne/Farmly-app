@@ -26,10 +26,20 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _cropController = TextEditingController();
 
   String _language = 'en';
+  final String _userType = 'aspiring';
+  final String _mainGoal = 'increase_yield';
   final List<String> _crops = [];
   bool _isLoading = false;
+  String? _error;
 
   bool get _isValid => _locationController.text.trim().length >= 2;
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    _cropController.dispose();
+    super.dispose();
+  }
 
   void _addCrop() {
     final crop = _cropController.text.trim().toLowerCase();
@@ -42,20 +52,25 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 
   Future<void> _submit() async {
-    setState(() => _isLoading = true);
-    try {
-      final body = jsonEncode({
-        'full_name': widget.fullName,
-        'phone_number': widget.phoneNumber,
-        'location': _locationController.text.trim(),
-        'preferred_language': _language,
-        'user_type': 'aspiring',
-        'years_experience': 0,
-        'main_goal': 'increase_yield',
-        'crops_grown': _crops,
-      });
+    if (!_isValid) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
-      http.Response? lastResp;
+    final body = jsonEncode({
+      'full_name': widget.fullName,
+      'phone_number': widget.phoneNumber,
+      'location': _locationController.text.trim(),
+      'preferred_language': _language,
+      'user_type': _userType,
+      'years_experience': 0,
+      'main_goal': _mainGoal,
+      'crops_grown': _crops,
+    });
+
+    http.Response? lastResp;
+    try {
       for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
         try {
           final resp = await http.post(
@@ -77,21 +92,37 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             );
             return;
           }
-        } catch (_) {}
+          if (!mounted) return;
+          break; // got a real HTTP error, don't try next base
+        } catch (_) {
+          // connection failed, try next base
+        }
       }
 
       if (!mounted) return;
-      String msg = 'Failed to save profile';
+      String msg = 'Failed to save profile.';
       if (lastResp != null) {
         try {
           final d = jsonDecode(lastResp.body);
-          msg = d['detail'] ?? d['message'] ?? lastResp.body;
+          msg = (d['detail'] is String ? d['detail'] : null) ??
+              (d['message'] is String ? d['message'] : null) ??
+              'Error ${lastResp.statusCode}';
         } catch (_) {}
+      } else {
+        msg = 'Unable to reach server. Check your connection.';
       }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $msg')));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _error = msg;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -117,103 +148,125 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ),
                 ],
               ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Set up your profile',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.darkPrimary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Set up your profile',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.darkPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tell us about yourself to get better recommendations',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Language
+                  _sectionLabel('Preferred language'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _langButton('en', 'English')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _langButton('et', 'አማርኛ')),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Location
+                  _sectionLabel('Location'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _locationController,
+                    decoration:
+                        const InputDecoration(hintText: 'e.g. Addis Ababa'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Crops (optional)
+                  _sectionLabel('Crops grown (optional)'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _cropController,
+                          decoration: const InputDecoration(
+                              hintText: 'e.g. teff, maize'),
+                          onSubmitted: (_) => _addCrop(),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Help us personalise your experience.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: AppColors.muted),
-                    ),
-                    const SizedBox(height: 28),
-
-                    // Language
-                    _sectionLabel('Preferred Language'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(child: _langButton('en', 'English')),
-                        const SizedBox(width: 12),
-                        Expanded(child: _langButton('am', 'አማርኛ')),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Location
-                    _sectionLabel('Location'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _locationController,
-                      decoration: const InputDecoration(
-                          hintText: 'e.g. Addis Ababa'),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Crops
-                    _sectionLabel('Crops Grown'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _cropController,
-                            decoration: const InputDecoration(
-                                hintText: 'e.g. teff, maize'),
-                            onSubmitted: (_) => _addCrop(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: _addCrop,
-                          icon: const Icon(Icons.add_circle,
-                              color: AppColors.primary, size: 32),
-                        ),
-                      ],
-                    ),
-                    if (_crops.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: _crops
-                            .map((c) => Chip(
-                                  label: Text(c),
-                                  deleteIcon: const Icon(Icons.close, size: 16),
-                                  onDeleted: () =>
-                                      setState(() => _crops.remove(c)),
-                                  backgroundColor: AppColors.backgroundLight,
-                                ))
-                            .toList(),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _addCrop,
+                        icon: const Icon(Icons.add_circle,
+                            color: AppColors.primary, size: 32),
                       ),
                     ],
-                    const SizedBox(height: 32),
-
-                    _isLoading
-                        ? const SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        : AuthButton(
-                            text: 'Finish Setup',
-                            onPressed: _isValid ? _submit : null,
-                          ),
+                  ),
+                  if (_crops.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: _crops
+                          .map((c) => Chip(
+                                label: Text(c),
+                                deleteIcon: const Icon(Icons.close, size: 16),
+                                onDeleted: () =>
+                                    setState(() => _crops.remove(c)),
+                                backgroundColor: AppColors.backgroundLight,
+                              ))
+                          .toList(),
+                    ),
                   ],
-                ),
+
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF0F0),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: Colors.red, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_error!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 32),
+
+                  _isLoading
+                      ? const SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : AuthButton(
+                          text: 'Finish setup',
+                          onPressed: _isValid ? _submit : null,
+                        ),
+                ],
               ),
             ),
           ),
