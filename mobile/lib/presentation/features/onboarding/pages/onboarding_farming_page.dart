@@ -28,7 +28,6 @@ class OnboardingFarmingPage extends StatefulWidget {
   final String fullName;
   final String phoneNumber;
   final String locationString;
-  final String language;
 
   const OnboardingFarmingPage({
     super.key,
@@ -36,7 +35,6 @@ class OnboardingFarmingPage extends StatefulWidget {
     required this.fullName,
     required this.phoneNumber,
     required this.locationString,
-    required this.language,
   });
 
   @override
@@ -76,7 +74,6 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
         'full_name': widget.fullName,
         'phone_number': widget.phoneNumber,
         'location': widget.locationString,
-        'preferred_language': widget.language,
         'user_type': _userType,
         'years_experience': _years,
         'main_goal': _mainGoal,

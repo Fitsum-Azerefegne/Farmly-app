@@ -34,7 +34,6 @@ def _to_profile_response(profile: UserProfile) -> ProfileResponse:
         full_name=profile.full_name,
         phone_number=profile.phone_number,
         location=profile.location,
-        preferred_language=profile.preferred_language,
         user_type=profile.user_type,
         years_experience=profile.years_experience,
         main_goal=profile.main_goal,
@@ -67,7 +66,6 @@ def complete_onboarding(
     if payload.phone_number is not None:
         profile.phone_number = payload.phone_number
     profile.location = payload.location
-    profile.preferred_language = payload.preferred_language
     profile.user_type = payload.user_type
     profile.years_experience = payload.years_experience
     profile.main_goal = payload.main_goal

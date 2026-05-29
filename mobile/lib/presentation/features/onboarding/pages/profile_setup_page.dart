@@ -26,7 +26,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _locationController = TextEditingController();
   final _cropController = TextEditingController();
 
-  String _language = 'en';
   final String _userType = 'aspiring';
   final String _mainGoal = 'increase_yield';
   final List<String> _crops = [];
@@ -64,7 +63,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       'full_name': widget.fullName,
       'phone_number': widget.phoneNumber,
       'location': _locationController.text.trim(),
-      'preferred_language': _language,
       'user_type': _userType,
       'years_experience': 0,
       'main_goal': _mainGoal,
@@ -171,18 +169,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Language
-                  _sectionLabel('Preferred language'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: _langButton('en', 'English')),
-                      const SizedBox(width: 12),
-                      Expanded(child: _langButton('et', 'አማርኛ')),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
                   // Location
                   _sectionLabel('Location'),
                   const SizedBox(height: 8),
@@ -288,32 +274,4 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ),
       );
 
-  Widget _langButton(String value, String label) {
-    final selected = _language == value;
-    return GestureDetector(
-      onTap: () => setState(() => _language = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.primary : Colors.grey.shade300,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: selected ? Colors.white : AppColors.text,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

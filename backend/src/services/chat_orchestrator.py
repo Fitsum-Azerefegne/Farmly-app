@@ -28,7 +28,6 @@ def _build_profile_context(profile: UserProfile | None) -> dict[str, str]:
     return {
         "full_name": profile.full_name or "",
         "location": profile.location or "",
-        "preferred_language": profile.preferred_language or "",
         "user_type": profile.user_type or "",
         "years_experience": str(profile.years_experience) if profile.years_experience is not None else "",
         "main_goal": profile.main_goal or "",
