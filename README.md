@@ -2,6 +2,8 @@
 
 Farmly is a farming assistant with a FastAPI backend, a Flutter app, voice input/output, crop advice, and a local sorghum disease model.
 
+The Android APK can be downloaded from the project's GitHub Releases page.
+
 ## Project Structure
 
 ```text
