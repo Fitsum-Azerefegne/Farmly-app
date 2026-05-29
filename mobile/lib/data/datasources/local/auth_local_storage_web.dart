@@ -13,7 +13,8 @@ class AuthLocalStorage {
 
   Future<String?> readToken() async {
     final v = html.window.localStorage[_keyToken];
-    debugPrint('AuthLocalStorage (web): read token ${v == null ? "null" : "length=${v.length}"}');
+    debugPrint(
+        'AuthLocalStorage (web): read token ${v == null ? "null" : "length=${v.length}"}');
     return v;
   }
 

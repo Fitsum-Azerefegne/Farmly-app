@@ -11,7 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/api.dart';
 import '../../../shared/app_button.dart';
-import '../../../../core/i18n.dart';
+
 import '../../../../core/toast.dart';
 import '../../profile/profile_sidebar.dart';
 
@@ -91,18 +91,16 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
   Widget build(BuildContext context) {
     final bg = _hover ? Colors.white : Colors.white;
     final shadow = _hover
-      ? const [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 10,
-          offset: Offset(0, 4))
-        ]
-      : const [
-        BoxShadow(
-          color: Color.fromRGBO(0, 0, 0, 0.06),
-          blurRadius: 4,
-          offset: Offset(0, 2))
-        ];
+        ? const [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+          ]
+        : const [
+            BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.06),
+                blurRadius: 4,
+                offset: Offset(0, 2))
+          ];
 
     return MouseRegion(
       onEnter: (_) => _setHover(true),
@@ -192,7 +190,6 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    I18n.init();
     _fetchSessions();
   }
 
@@ -287,11 +284,7 @@ class _ChatPageState extends State<ChatPage> {
       }
       if (mounted) {
         // show a user-facing toast so they know something went wrong
-        if (kDebugMode) {
-          Toast.show(context, 'Failed to load chat sessions');
-        } else {
-          Toast.showTranslated(context, 'load_failed');
-        }
+        Toast.show(context, 'Failed to load chat sessions');
       }
       // Create a local optimistic session so the UI is usable offline.
       if (_active == null) {
@@ -384,13 +377,7 @@ class _ChatPageState extends State<ChatPage> {
       if (kDebugMode)
         print(
             'Failed to load messages for ${s.id}: ${r?.statusCode} ${r?.body}');
-      if (mounted) {
-        if (kDebugMode) {
-          Toast.show(context, 'Failed to load messages');
-        } else {
-          Toast.showTranslated(context, 'load_failed');
-        }
-      }
+      if (mounted) Toast.show(context, 'Failed to load messages');
     }
   }
 
@@ -476,14 +463,14 @@ class _ChatPageState extends State<ChatPage> {
         });
         _scrollToBottom();
       } catch (_) {
-        _showSnackTranslated('invalid_response');
+        Toast.show(context, 'Invalid response from server');
       }
     } else {
       final err = r != null ? r.body : 'No response from server';
       if (kDebugMode) {
         Toast.show(context, 'Send failed: $err');
       } else {
-        _showSnackTranslated('send_failed');
+        Toast.show(context, 'Send failed');
       }
     }
   }
@@ -497,11 +484,6 @@ class _ChatPageState extends State<ChatPage> {
         curve: Curves.easeOut,
       );
     });
-  }
-
-  void _showSnackTranslated(String key) {
-    if (!mounted) return;
-    Toast.showTranslated(context, key);
   }
 
   Future<void> _pickImage() async {
@@ -843,7 +825,7 @@ class _ChatPageState extends State<ChatPage> {
                     const Icon(Icons.eco, size: 48, color: AppColors.primary),
               ),
               const SizedBox(height: 16),
-              Text(I18n.t('welcome_title'),
+              Text('Welcome to Farmly',
                   style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
@@ -852,7 +834,7 @@ class _ChatPageState extends State<ChatPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Text(
-                  I18n.t('welcome_sub'),
+                  'Your farming assistant — diagnose, advise, and plan with confidence.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 14, color: AppColors.muted),
                 ),
@@ -1135,8 +1117,8 @@ class _ChatPageState extends State<ChatPage> {
                         onSubmitted: (_) => _send(),
                         decoration: InputDecoration.collapsed(
                           hintText: _active == null
-                              ? I18n.t('select_or_create_chat')
-                              : I18n.t('ask_hint'),
+                              ? 'Select or create a chat'
+                              : 'Ask me about your farm...',
                         ),
                         style: const TextStyle(fontSize: 15),
                       ),

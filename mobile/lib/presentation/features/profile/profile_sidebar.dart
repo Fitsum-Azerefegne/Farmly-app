@@ -7,13 +7,13 @@ import '../../../core/constants/api.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/local/auth_local_storage.dart';
 import '../../shared/app_button.dart';
-import '../../../core/i18n.dart';
 import '../../../core/toast.dart';
 
 class ProfileSidebar extends StatefulWidget {
   final String accessToken;
   final VoidCallback onClose;
-  const ProfileSidebar({super.key, required this.accessToken, required this.onClose});
+  const ProfileSidebar(
+      {super.key, required this.accessToken, required this.onClose});
 
   @override
   State<ProfileSidebar> createState() => _ProfileSidebarState();
@@ -30,7 +30,7 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
   String? _userType;
   int _years = 0;
   String? _mainGoal;
-  String _lang = I18n.lang;
+  String _lang = 'en';
   bool _loading = true;
   bool _saving = false;
 
@@ -50,7 +50,8 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
     setState(() => _loading = true);
     try {
       for (final base in apiBases) {
-        final r = await http.get(Uri.parse('$base/api/users/me/profile'), headers: _headers);
+        final r = await http.get(Uri.parse('$base/api/users/me/profile'),
+            headers: _headers);
         if (r.statusCode == 200) {
           final d = jsonDecode(r.body);
           _full.text = d['full_name'] ?? '';
@@ -60,7 +61,9 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
           _userType = d['user_type'] as String?;
           _years = (d['years_experience'] is int)
               ? d['years_experience'] as int
-              : (d['years_experience'] is String ? int.tryParse(d['years_experience']) ?? 0 : 0);
+              : (d['years_experience'] is String
+                  ? int.tryParse(d['years_experience']) ?? 0
+                  : 0);
           _mainGoal = d['main_goal'] as String?;
           final crops = d['crops_grown'];
           if (crops is List) {
@@ -69,7 +72,7 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
               if (c is String) _crops.add(c);
             }
           }
-          _lang = d['preferred_language'] ?? I18n.lang;
+          _lang = d['preferred_language'] ?? 'en';
           break;
         }
       }
@@ -83,18 +86,20 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
     var saved = false;
     try {
       for (final base in apiBases) {
-        final r = await http.patch(Uri.parse('$base/api/users/me/profile'), headers: _headers, body: jsonEncode({
-          'full_name': _full.text.trim(),
-          'farmer_details': _farmer.text.trim(),
-          'location': _location.text.trim(),
-          'preferred_language': _lang,
-          'user_type': _userType,
-          'years_experience': _years,
-          'main_goal': _mainGoal,
-          'crops_grown': _crops,
-        }));
+        final r = await http.patch(Uri.parse('$base/api/users/me/profile'),
+            headers: _headers,
+            body: jsonEncode({
+              'full_name': _full.text.trim(),
+              'farmer_details': _farmer.text.trim(),
+              'location': _location.text.trim(),
+              'preferred_language': _lang,
+              'user_type': _userType,
+              'years_experience': _years,
+              'main_goal': _mainGoal,
+              'crops_grown': _crops,
+            }));
         if (r.statusCode == 200) {
-          await I18n.setLanguage(_lang);
+          // language persistence removed; accept server value
           saved = true;
           break;
         }
@@ -102,7 +107,7 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
     } catch (_) {}
     if (saved) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Toast.showTranslated(context, 'profile_updated');
+        if (mounted) Toast.show(context, 'Profile updated');
       });
     }
     if (mounted) setState(() => _saving = false);
@@ -115,7 +120,7 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
     } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Toast.showTranslated(context, 'logout_success');
+      Toast.show(context, 'Logged out');
       Navigator.pushNamedAndRemoveUntil(context, '/', (r) => false);
     });
   }
@@ -135,7 +140,8 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
               : Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 12),
                       child: Row(
                         children: [
                           GestureDetector(
@@ -143,7 +149,9 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                             child: const Icon(Icons.chevron_left, size: 28),
                           ),
                           const SizedBox(width: 8),
-                          Text(I18n.t('profile_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                          const Text('Profile',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
@@ -159,43 +167,64 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                               Center(
                                 child: CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: const Color.fromRGBO(27, 138, 62, 0.08),
-                                  child: const Icon(Icons.eco, size: 36, color: AppColors.primary),
+                                  backgroundColor:
+                                      const Color.fromRGBO(27, 138, 62, 0.08),
+                                  child: const Icon(Icons.eco,
+                                      size: 36, color: AppColors.primary),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: _full,
-                                decoration: InputDecoration(labelText: I18n.t('full_name')),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                decoration: const InputDecoration(
+                                    labelText: 'Full name'),
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _phone,
-                                decoration: InputDecoration(labelText: I18n.t('phone_number')),
+                                decoration: const InputDecoration(
+                                    labelText: 'Phone number'),
                                 enabled: false,
                               ),
                               const SizedBox(height: 8),
                               // Farmer/onboarding fields
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
-                                initialValue: ['aspiring', 'beginner', 'experienced', 'explorer']
-                                        .contains(_userType)
+                                initialValue: [
+                                  'aspiring',
+                                  'beginner',
+                                  'experienced',
+                                  'explorer'
+                                ].contains(_userType)
                                     ? _userType
                                     : null,
                                 items: const [
-                                  DropdownMenuItem(value: 'aspiring', child: Text('Aspiring farmer')),
-                                  DropdownMenuItem(value: 'beginner', child: Text('Beginner farmer')),
-                                  DropdownMenuItem(value: 'experienced', child: Text('Experienced farmer')),
-                                  DropdownMenuItem(value: 'explorer', child: Text('Explorer')),
+                                  DropdownMenuItem(
+                                      value: 'aspiring',
+                                      child: Text('Aspiring farmer')),
+                                  DropdownMenuItem(
+                                      value: 'beginner',
+                                      child: Text('Beginner farmer')),
+                                  DropdownMenuItem(
+                                      value: 'experienced',
+                                      child: Text('Experienced farmer')),
+                                  DropdownMenuItem(
+                                      value: 'explorer',
+                                      child: Text('Explorer')),
                                 ],
                                 onChanged: (v) => setState(() => _userType = v),
-                                decoration: const InputDecoration(labelText: 'Farmer type'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Farmer type'),
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 initialValue: _years.toString(),
-                                decoration: const InputDecoration(labelText: 'Years of experience'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Years of experience'),
                                 keyboardType: TextInputType.number,
                                 onChanged: (v) => _years = int.tryParse(v) ?? 0,
                               ),
@@ -211,22 +240,39 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                                     ? _mainGoal
                                     : null,
                                 items: const [
-                                  DropdownMenuItem(value: 'increase_yield', child: Text('Increase crop yield')),
-                                  DropdownMenuItem(value: 'reduce_costs', child: Text('Reduce farming costs')),
-                                  DropdownMenuItem(value: 'sustainable_farming', child: Text('Sustainable farming')),
-                                  DropdownMenuItem(value: 'organic_farming', child: Text('Organic farming')),
-                                  DropdownMenuItem(value: 'market_access', child: Text('Better market access')),
+                                  DropdownMenuItem(
+                                      value: 'increase_yield',
+                                      child: Text('Increase crop yield')),
+                                  DropdownMenuItem(
+                                      value: 'reduce_costs',
+                                      child: Text('Reduce farming costs')),
+                                  DropdownMenuItem(
+                                      value: 'sustainable_farming',
+                                      child: Text('Sustainable farming')),
+                                  DropdownMenuItem(
+                                      value: 'organic_farming',
+                                      child: Text('Organic farming')),
+                                  DropdownMenuItem(
+                                      value: 'market_access',
+                                      child: Text('Better market access')),
                                 ],
                                 onChanged: (v) => setState(() => _mainGoal = v),
-                                decoration: const InputDecoration(labelText: 'Main goal'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Main goal'),
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: _cropController,
-                                decoration: const InputDecoration(labelText: 'Crops grown (comma separated)'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Crops grown (comma separated)'),
                                 onFieldSubmitted: (v) {
                                   final c = v.trim().toLowerCase();
-                                  if (c.isNotEmpty && !_crops.contains(c)) setState(() { _crops.add(c); _cropController.clear(); });
+                                  if (c.isNotEmpty && !_crops.contains(c)) {
+                                    setState(() {
+                                      _crops.add(c);
+                                      _cropController.clear();
+                                    });
+                                  }
                                 },
                               ),
                               if (_crops.isNotEmpty) ...[
@@ -234,20 +280,26 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 6,
-                                  children: _crops.map((c) => Chip(
-                                    label: Text(c),
-                                    onDeleted: () => setState(() => _crops.remove(c)),
-                                  )).toList(),
+                                  children: _crops
+                                      .map((c) => Chip(
+                                            label: Text(c),
+                                            onDeleted: () => setState(
+                                                () => _crops.remove(c)),
+                                          ))
+                                      .toList(),
                                 ),
                               ],
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
-                                initialValue: ['en'].contains(_lang) ? _lang : 'en',
+                                initialValue: _lang == 'en' ? 'en' : 'en',
                                 items: const [
-                                  DropdownMenuItem(value: 'en', child: Text('English')),
+                                  DropdownMenuItem(
+                                      value: 'en', child: Text('English')),
                                 ],
-                                onChanged: (v) => setState(() => _lang = v ?? 'en'),
-                                decoration: InputDecoration(labelText: I18n.t('language')),
+                                onChanged: (v) =>
+                                    setState(() => _lang = v ?? 'en'),
+                                decoration: const InputDecoration(
+                                    labelText: 'Language'),
                               ),
                               const SizedBox(height: 20),
                               Row(
@@ -257,8 +309,9 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                                       onPressed: _saving ? null : _save,
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      child: Text(_saving ? '...' : I18n.t('save_profile')),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      child: Text(_saving ? '...' : 'Save'),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -267,8 +320,9 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                                       onPressed: widget.onClose,
                                       backgroundColor: Colors.white,
                                       foregroundColor: AppColors.darkPrimary,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      child: Text(I18n.t('cancel')),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      child: const Text('Cancel'),
                                     ),
                                   ),
                                 ],
@@ -286,7 +340,7 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                         backgroundColor: Colors.white,
                         foregroundColor: AppColors.darkPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: Text(I18n.t('logout')),
+                        child: const Text('Logout'),
                       ),
                     )
                   ],

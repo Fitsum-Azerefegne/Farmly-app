@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'i18n.dart';
 
 class Toast {
   static void show(BuildContext context, String message,
@@ -17,8 +16,7 @@ class Toast {
 
   static void showTranslated(BuildContext context, String key,
       {Duration duration = const Duration(seconds: 3)}) {
-    final msg = I18n.t(key);
-    show(context, msg, duration: duration);
+    show(context, key, duration: duration);
   }
 }
 

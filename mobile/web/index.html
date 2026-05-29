@@ -31,6 +31,30 @@
 
   <title>farmly_</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Pointer cursor for interactive elements (applies only to Farmly app web build) */
+    button:not(:disabled),
+    a,
+    [role="button"]:not([disabled]),
+    .card,
+    .icon,
+    .icon-button,
+    .dropdown,
+    .tab,
+    .menu-item,
+    .clickable,
+    .btn,
+    .link,
+    .nav-item,
+    .tab-item,
+    [data-clickable] {
+      cursor: pointer;
+    }
+    button:disabled,
+    [disabled] {
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
   <!--

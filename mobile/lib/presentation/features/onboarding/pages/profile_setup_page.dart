@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/i18n.dart';
 import '../../auth/widgets/auth_button.dart';
 import '../../chat/pages/chat_page.dart';
 
@@ -153,36 +152,37 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    I18n.t('setup_profile_title'),
+                  const Text(
+                    'Set up your profile',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.darkPrimary,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    I18n.t('setup_profile_sub'),
+                  const Text(
+                    'Tell us about yourself to get better recommendations',
                     textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(fontSize: 14, color: AppColors.muted),
+                    style: TextStyle(fontSize: 14, color: AppColors.muted),
                   ),
                   const SizedBox(height: 28),
 
                   // Language
-                  _sectionLabel(I18n.t('preferred_language')),
+                  _sectionLabel('Preferred language'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(child: _langButton('en', 'English')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _langButton('et', 'አማርኛ')),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Location
-                  _sectionLabel(I18n.t('location_label')),
+                  _sectionLabel('Location'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _locationController,
@@ -193,7 +193,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   const SizedBox(height: 20),
 
                   // Crops (optional)
-                  _sectionLabel(I18n.t('crops_grown_optional')),
+                  _sectionLabel('Crops grown (optional)'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -263,7 +263,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           child: Center(child: CircularProgressIndicator()),
                         )
                       : AuthButton(
-                          text: I18n.t('finish_setup'),
+                          text: 'Finish setup',
                           onPressed: _isValid ? _submit : null,
                         ),
                 ],

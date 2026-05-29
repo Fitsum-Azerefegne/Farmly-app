@@ -5,7 +5,6 @@ import '../../../core/constants/api.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/local/auth_local_storage.dart';
 import '../../shared/app_button.dart';
-import '../../../core/i18n.dart';
 import '../../../core/toast.dart';
 
 class ProfileModal extends StatefulWidget {
@@ -19,7 +18,7 @@ class ProfileModal extends StatefulWidget {
 class _ProfileModalState extends State<ProfileModal> {
   final _full = TextEditingController();
   final _phone = TextEditingController();
-  String _lang = I18n.lang;
+  String _lang = 'en';
   bool _loading = true;
   bool _saving = false;
 
@@ -39,12 +38,13 @@ class _ProfileModalState extends State<ProfileModal> {
     setState(() => _loading = true);
     try {
       for (final base in apiBases) {
-        final r = await http.get(Uri.parse('$base/api/users/me/profile'), headers: _headers);
+        final r = await http.get(Uri.parse('$base/api/users/me/profile'),
+            headers: _headers);
         if (r.statusCode == 200) {
           final d = jsonDecode(r.body);
           _full.text = d['full_name'] ?? '';
           _phone.text = d['phone_number'] ?? '';
-          _lang = d['preferred_language'] ?? I18n.lang;
+          _lang = d['preferred_language'] ?? 'en';
           break;
         }
       }
@@ -57,12 +57,14 @@ class _ProfileModalState extends State<ProfileModal> {
     var saved = false;
     try {
       for (final base in apiBases) {
-        final r = await http.patch(Uri.parse('$base/api/users/me/profile'), headers: _headers, body: jsonEncode({
-          'full_name': _full.text.trim(),
-          'preferred_language': _lang,
-        }));
+        final r = await http.patch(Uri.parse('$base/api/users/me/profile'),
+            headers: _headers,
+            body: jsonEncode({
+              'full_name': _full.text.trim(),
+              'preferred_language': _lang,
+            }));
         if (r.statusCode == 200) {
-          await I18n.setLanguage(_lang);
+          // language persistence removed; keep server value
           saved = true;
           break;
         }
@@ -70,7 +72,7 @@ class _ProfileModalState extends State<ProfileModal> {
     } catch (_) {}
     if (saved) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Toast.showTranslated(context, 'profile_updated');
+        if (mounted) Toast.show(context, 'Profile updated');
       });
     }
     if (mounted) setState(() => _saving = false);
@@ -81,7 +83,7 @@ class _ProfileModalState extends State<ProfileModal> {
     await AuthLocalStorage().deleteToken();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Toast.showTranslated(context, 'logout_success');
+      Toast.show(context, 'Logged out');
       Navigator.pushNamedAndRemoveUntil(context, '/', (r) => false);
     });
   }
@@ -96,19 +98,28 @@ class _ProfileModalState extends State<ProfileModal> {
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(I18n.t('profile_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  const Text('Profile',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
-                  TextField(controller: _full, decoration: InputDecoration(labelText: I18n.t('full_name'))),
+                  TextField(
+                      controller: _full,
+                      decoration:
+                          const InputDecoration(labelText: 'Full name')),
                   const SizedBox(height: 8),
-                  TextField(controller: _phone, decoration: InputDecoration(labelText: I18n.t('phone_number')), enabled: false),
+                  TextField(
+                      controller: _phone,
+                      decoration:
+                          const InputDecoration(labelText: 'Phone number'),
+                      enabled: false),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: ['en'].contains(_lang) ? _lang : 'en',
+                    initialValue: _lang == 'en' ? 'en' : 'en',
                     items: const [
                       DropdownMenuItem(value: 'en', child: Text('English')),
                     ],
                     onChanged: (v) => setState(() => _lang = v ?? 'en'),
-                    decoration: InputDecoration(labelText: I18n.t('language')),
+                    decoration: const InputDecoration(labelText: 'Language'),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -119,7 +130,7 @@ class _ProfileModalState extends State<ProfileModal> {
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(_saving ? '...' : I18n.t('save_profile')),
+                          child: Text(_saving ? '...' : 'Save'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -129,7 +140,7 @@ class _ProfileModalState extends State<ProfileModal> {
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.darkPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(I18n.t('logout')),
+                          child: const Text('Logout'),
                         ),
                       ),
                     ],

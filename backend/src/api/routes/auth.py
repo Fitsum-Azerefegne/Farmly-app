@@ -21,7 +21,7 @@ from src.api.schemas.auth import (
     ResetPasswordResponse,
 )
 from src.auth.dependencies import get_current_user
-from src.api.i18n import t
+# translations removed: inlining English messages directly
 from src.auth.jwt_utils import create_access_token, decode_access_token
 from src.auth.otp_utils import generate_otp_code, hash_otp, otp_expiry_time, verify_otp_hash
 from src.auth.password import hash_password, verify_password
@@ -271,10 +271,9 @@ def request_phone_change(
     db: Session = Depends(get_db),
 ) -> PhoneChangeRequestedResponse:
     if not verify_password(payload.current_password, current_user.password_hash):
-        lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=t("current_password_incorrect", lang),
+            detail="Current password is incorrect",
         )
 
     try:
@@ -348,9 +347,8 @@ def request_phone_change(
     if settings.debug and debug_otp is None:
         debug_otp = otp_code
 
-    lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
     return PhoneChangeRequestedResponse(
-        message=t("phone_change_otp_sent", lang),
+        message="Phone change OTP sent",
         expires_in_minutes=settings.otp_expire_minutes,
         debug_otp=debug_otp,
     )
@@ -378,10 +376,9 @@ def confirm_phone_change(
 
     existing_user = db.query(User).filter(User.phone_number == new_phone).first()
     if existing_user and existing_user.user_id != current_user.user_id:
-        lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=t("phone_in_use", lang),
+            detail="Phone number already in use",
         )
 
     record = (
@@ -404,20 +401,17 @@ def confirm_phone_change(
     if expires_at < now:
         record.consumed = True
         db.commit()
-        lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
-        raise HTTPException(status_code=400, detail=t("otp_expired", lang))
+        raise HTTPException(status_code=400, detail="OTP expired")
 
     if record.attempts >= record.max_attempts:
         record.consumed = True
         db.commit()
-        lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
-        raise HTTPException(status_code=429, detail=t("max_attempts_exceeded", lang))
+        raise HTTPException(status_code=429, detail="Maximum OTP attempts exceeded")
 
     if not verify_otp_hash(new_phone, payload.otp_code, record.otp_code_hash):
         record.attempts += 1
         db.commit()
-        lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
-        raise HTTPException(status_code=400, detail=t("otp_invalid", lang))
+        raise HTTPException(status_code=400, detail="Invalid OTP")
 
     current_user.phone_number = new_phone
     profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.user_id).first()
@@ -431,9 +425,8 @@ def confirm_phone_change(
     db.commit()
     db.refresh(current_user)
 
-    lang = current_user.profile.preferred_language if current_user and current_user.profile else "en"
     return PhoneChangeConfirmResponse(
-        message=t("phone_changed_success", lang),
+        message="Phone number changed successfully",
         phone_number=current_user.phone_number,
     )
 
