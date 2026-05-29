@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 import '../../auth/widgets/auth_button.dart';
 import '../../chat/pages/chat_page.dart';
 
@@ -32,7 +33,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   bool _isLoading = false;
   String? _error;
 
-  bool get _isValid => _locationController.text.trim().length >= 2;
+  bool get _isValid =>
+      _locationController.text.trim().length >= 2 && _crops.isNotEmpty;
 
   @override
   void dispose() {
@@ -71,7 +73,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
     http.Response? lastResp;
     try {
-      for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
+      for (final base in apiBases) {
         try {
           final resp = await http.post(
             Uri.parse('$base/api/onboarding/complete'),
@@ -193,7 +195,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   const SizedBox(height: 20),
 
                   // Crops (optional)
-                  _sectionLabel('Crops grown (optional)'),
+                  _sectionLabel('Crops grown'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -201,7 +203,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         child: TextField(
                           controller: _cropController,
                           decoration: const InputDecoration(
-                              hintText: 'e.g. teff, maize'),
+                              hintText: 'Add at least one crop'),
                           onSubmitted: (_) => _addCrop(),
                         ),
                       ),

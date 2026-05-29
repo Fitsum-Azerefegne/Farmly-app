@@ -267,15 +267,7 @@ class _ChatPageState extends State<ChatPage> {
       if (list.isNotEmpty && _active == null) {
         _selectSession(list.first);
       } else if (list.isEmpty && _active == null) {
-        // No sessions returned; create a local optimistic session so the
-        // user can start chatting immediately.
-        final local = _Session(
-            id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-            title: 'New Chat');
-        setState(() {
-          _sessions.insert(0, local);
-        });
-        _selectSession(local);
+        await _createSession();
       }
     } else {
       setState(() => _loadingSessions = false);
@@ -286,39 +278,23 @@ class _ChatPageState extends State<ChatPage> {
         // show a user-facing toast so they know something went wrong
         Toast.show(context, 'Failed to load chat sessions');
       }
-      // Create a local optimistic session so the UI is usable offline.
-      if (_active == null) {
-        final local = _Session(
-            id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-            title: 'New Chat');
-        setState(() {
-          _sessions.insert(0, local);
-        });
-        _selectSession(local);
-      }
     }
   }
 
-  Future<void> _createSession() async {
+  Future<_Session?> _createSession() async {
     final r = await _post('/api/chat/sessions', {'title': 'New Chat'});
-    if (!mounted) return;
+    if (!mounted) return null;
     if (r != null && r.statusCode == 201) {
       final s = _Session.fromJson(jsonDecode(r.body));
       setState(() => _sessions.insert(0, s));
       _selectSession(s);
-      return;
+      return s;
     }
 
-    // Fallback: create a local optimistic session so quick actions work when
-    // backend is unavailable. This keeps the UI responsive; server sync can
-    // reconcile later.
-    final local = _Session(
-        id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'New Chat');
-    setState(() {
-      _sessions.insert(0, local);
-    });
-    _selectSession(local);
+    if (mounted) {
+      Toast.show(context, 'Could not create chat session');
+    }
+    return null;
   }
 
   Future<void> _renameSession(_Session s, String title) async {
@@ -385,7 +361,11 @@ class _ChatPageState extends State<ChatPage> {
     final text = _msgCtrl.text.trim();
     final img = _pickedImage;
     if (text.isEmpty && img == null) return;
-    if (_active == null || _sending) return;
+    if (_sending) return;
+    if (_active == null || _active!.id.startsWith('local_')) {
+      final created = await _createSession();
+      if (created == null) return;
+    }
 
     final optimisticId = 'opt_${DateTime.now().millisecondsSinceEpoch}';
     final displayText = text.isNotEmpty ? text : '📷 Image';

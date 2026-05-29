@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 import '../../../../data/datasources/local/auth_local_storage.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_footer.dart';
@@ -47,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<http.Response?> _post(String path, Map<String, dynamic> body) async {
-    for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
+    for (final base in apiBases) {
       try {
         final resp = await http.post(
           Uri.parse('$base$path'),

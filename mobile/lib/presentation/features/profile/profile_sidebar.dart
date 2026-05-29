@@ -86,18 +86,19 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
     var saved = false;
     try {
       for (final base in apiBases) {
+        final body = <String, dynamic>{
+          'full_name': _full.text.trim(),
+          'location': _location.text.trim(),
+          'preferred_language': _lang,
+          'user_type': _userType,
+          'years_experience': _years,
+          'main_goal': _mainGoal,
+        };
+        if (_crops.isNotEmpty) {
+          body['crops_grown'] = _crops;
+        }
         final r = await http.patch(Uri.parse('$base/api/users/me/profile'),
-            headers: _headers,
-            body: jsonEncode({
-              'full_name': _full.text.trim(),
-              'farmer_details': _farmer.text.trim(),
-              'location': _location.text.trim(),
-              'preferred_language': _lang,
-              'user_type': _userType,
-              'years_experience': _years,
-              'main_goal': _mainGoal,
-              'crops_grown': _crops,
-            }));
+            headers: _headers, body: jsonEncode(body));
         if (r.statusCode == 200) {
           // language persistence removed; accept server value
           saved = true;

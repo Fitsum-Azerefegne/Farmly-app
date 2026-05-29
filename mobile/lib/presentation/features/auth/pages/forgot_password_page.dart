@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 import '../widgets/auth_button.dart';
 import 'login_page.dart';
 
@@ -37,7 +38,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future<http.Response?> _post(String path, Map<String, dynamic> body) async {
-    for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
+    for (final base in apiBases) {
       try {
         final resp = await http.post(
           Uri.parse('$base$path'),
@@ -76,8 +77,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _errorMessage = null;
     });
     try {
-      final resp = await _post('/api/auth/forgot-password/request-otp',
-          {'phone_number': _fullPhone});
+      final resp =
+          await _post('/api/auth/forgot-password', {'phone_number': _fullPhone});
       if (!mounted) return;
       if (resp == null) {
         setState(
@@ -110,7 +111,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _errorMessage = null;
     });
     try {
-      final resp = await _post('/api/auth/verify-otp', {
+      final resp = await _post('/api/auth/forgot-password/verify', {
         'phone_number': _fullPhone,
         'otp_code': _otpController.text.trim(),
       });
@@ -150,10 +151,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _errorMessage = null;
     });
     try {
-      final resp = await _post('/api/auth/forgot-password/reset', {
+      final resp = await _post('/api/auth/reset-password', {
         'phone_number': _fullPhone,
         'reset_token': _resetToken,
         'new_password': _newPasswordController.text,
+        'confirm_password': _confirmController.text,
       });
       if (!mounted) return;
       if (resp == null) {

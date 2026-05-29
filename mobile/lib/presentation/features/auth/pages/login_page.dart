@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_footer.dart';
 import '../../onboarding/pages/onboarding_location_page.dart';
@@ -54,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       http.Response? lastResp;
-      for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
+      for (final base in apiBases) {
         try {
           final resp = await http.post(
             Uri.parse('$base/api/auth/login'),
@@ -71,28 +72,32 @@ class _LoginPageState extends State<LoginPage> {
             final token = data['access_token'] as String;
             final user = data['user'] as Map<String, dynamic>;
             final onboardingDone = user['onboarding_completed'] == true;
-              if (onboardingDone) {
-                await AuthLocalStorage().saveToken(token);
-                if (!mounted) return;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => ChatPage(accessToken: token)),
-                  (_) => false,
-                );
-              } else {
-                await AuthLocalStorage().saveToken(token);
-                if (!mounted) return;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => OnboardingLocationPage(
-                      accessToken: token,
-                      fullName: (user['full_name'] as String?) ?? '',
-                      phoneNumber: fullPhone,
-                    ),
+            if (onboardingDone) {
+              await AuthLocalStorage().saveToken(token);
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => ChatPage(accessToken: token)),
+                (_) => false,
+              );
+            } else {
+              await AuthLocalStorage().saveToken(token);
+              final profile = await _loadProfile(token);
+              final fullName = (user['full_name'] as String?) ??
+                  (profile?['full_name'] as String?) ??
+                  '';
+              if (!mounted) return;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OnboardingLocationPage(
+                    accessToken: token,
+                    fullName: fullName,
+                    phoneNumber: fullPhone,
                   ),
-                );
-              }
+                ),
+              );
+            }
             return;
           }
           // got a real response (4xx/5xx) — no need to try next base
@@ -111,6 +116,25 @@ class _LoginPageState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<Map<String, dynamic>?> _loadProfile(String token) async {
+    for (final base in apiBases) {
+      try {
+        final resp = await http.get(
+          Uri.parse('$base/api/users/me/profile'),
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+        if (resp.statusCode == 200) {
+          return jsonDecode(resp.body) as Map<String, dynamic>;
+        }
+        break;
+      } catch (_) {}
+    }
+    return null;
   }
 
   @override

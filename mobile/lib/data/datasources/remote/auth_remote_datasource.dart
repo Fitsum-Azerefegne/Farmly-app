@@ -23,11 +23,7 @@ class AuthRemoteDataSource {
         if (resp.statusCode >= 200 && resp.statusCode < 300) {
           return fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
         }
-        // real HTTP error — don't try next base
-        final detail = _extractDetail(resp);
-        throw Exception(detail);
-      } on Exception {
-        rethrow;
+        break;
       } catch (_) {
         // connection error — try next base
       }

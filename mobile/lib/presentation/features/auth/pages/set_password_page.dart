@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 
 class SetPasswordPage extends StatefulWidget {
   final String phone;
@@ -23,9 +24,9 @@ class _SetPasswordPageState extends State<SetPasswordPage> {
   Future<void> _submit() async {
     final p = passwordController.text.trim();
     final c = confirmController.text.trim();
-    if (p.length < 6) {
+    if (p.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Password must be at least 6 characters')));
+          content: Text('Password must be at least 8 characters')));
       return;
     }
     if (p != c) {
@@ -33,26 +34,22 @@ class _SetPasswordPageState extends State<SetPasswordPage> {
           const SnackBar(content: Text('Passwords do not match')));
       return;
     }
+    if (widget.setupToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Verification is required before setting password')));
+      return;
+    }
     setState(() => _isLoading = true);
     try {
-      final candidates = ['http://localhost:8000', 'http://10.0.2.2:8000'];
       http.Response? lastResp;
-      for (final base in candidates) {
-        final uri = widget.setupToken == null
-            ? Uri.parse('$base/api/auth/register-no-otp')
-            : Uri.parse('$base/api/auth/set-password');
+      for (final base in apiBases) {
+        final uri = Uri.parse('$base/api/auth/set-password');
         try {
-          final body = widget.setupToken == null
-              ? jsonEncode({
-                  'full_name': '',
-                  'phone_number': widget.phone,
-                  'password': p
-                })
-              : jsonEncode({
-                  'phone_number': widget.phone,
-                  'setup_token': widget.setupToken,
-                  'password': p
-                });
+          final body = jsonEncode({
+            'phone_number': widget.phone,
+            'setup_token': widget.setupToken,
+            'password': p,
+          });
           final resp = await http.post(uri,
               headers: {'Content-Type': 'application/json'}, body: body);
           lastResp = resp;

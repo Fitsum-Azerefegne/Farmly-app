@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/api.dart';
 import '../widgets/onboarding_scaffold.dart';
 import '../../chat/pages/chat_page.dart';
 
@@ -51,7 +52,8 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
   bool _isLoading = false;
   String? _error;
 
-  bool get _isValid => _userType != null && _mainGoal != null;
+  bool get _isValid =>
+      _userType != null && _mainGoal != null && _crops.isNotEmpty;
 
   void _addCrop() {
     final crop = _cropController.text.trim().toLowerCase();
@@ -81,7 +83,7 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
         'crops_grown': _crops,
       });
       http.Response? lastResp;
-      for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
+      for (final base in apiBases) {
         try {
           final resp = await http.post(
             Uri.parse('$base/api/onboarding/complete'),
@@ -109,7 +111,14 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
       if (lastResp != null) {
         try {
           final d = jsonDecode(lastResp.body);
-          msg = (d['detail'] is String ? d['detail'] : null) ?? msg;
+          final detail = d['detail'];
+          if (detail is String) {
+            msg = detail;
+          } else if (detail is List &&
+              detail.isNotEmpty &&
+              detail.first is Map) {
+            msg = detail.first['msg']?.toString() ?? msg;
+          }
         } catch (_) {}
       }
       if (mounted) {
@@ -177,7 +186,7 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
             onChanged: (v) => setState(() => _mainGoal = v),
           ),
           const SizedBox(height: 16),
-          _label('Crops Grown (optional)'),
+          _label('Crops Grown'),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -185,7 +194,7 @@ class _OnboardingFarmingPageState extends State<OnboardingFarmingPage> {
                 child: TextField(
                   controller: _cropController,
                   decoration: const InputDecoration(
-                      hintText: 'e.g. teff, maize, wheat'),
+                      hintText: 'Add at least one crop'),
                   onSubmitted: (_) => _addCrop(),
                 ),
               ),

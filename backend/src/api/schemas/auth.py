@@ -27,6 +27,7 @@ class LoginRequest(BaseModel):
 class UserResponse(BaseModel):
     user_id: str
     phone_number: str
+    full_name: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -79,14 +80,20 @@ class PhoneChangeConfirmResponse(BaseModel):
     phone_number: str
 
 
-class ForgotPasswordOTPRequest(BaseModel):
+class ForgotPasswordRequest(BaseModel):
     phone_number: str = Field(min_length=9, max_length=20)
+
+
+class ForgotPasswordVerifyRequest(BaseModel):
+    phone_number: str = Field(min_length=9, max_length=20)
+    otp_code: str = Field(min_length=4, max_length=10)
 
 
 class ResetPasswordRequest(BaseModel):
     phone_number: str = Field(min_length=9, max_length=20)
     reset_token: str = Field(min_length=20)
     new_password: str = Field(min_length=8, max_length=72)
+    confirm_password: str = Field(min_length=8, max_length=72)
 
 
 class ResetPasswordResponse(BaseModel):
