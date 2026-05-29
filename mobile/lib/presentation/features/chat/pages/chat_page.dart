@@ -182,7 +182,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _voiceBusy = false;
   String? _speakingMessageId;
   XFile? _pickedImage;
-  bool _sidebarOpen = true;
+  bool _sidebarOpen = false;
   bool _profileOpen = false;
 
   String _capitalizeLabel(String s) {
@@ -689,17 +689,36 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 700;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth >= 700;
+    final sidebarWidth = isWide ? 260.0 : math.min(screenWidth * 0.86, 340.0);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
           Row(
             children: [
-              if (isWide || _sidebarOpen) _buildSidebar(isWide),
+              if (isWide) _buildSidebar(isWide, width: sidebarWidth),
               Expanded(child: _buildChat(isWide)),
             ],
           ),
+          if (!isWide && _sidebarOpen)
+            GestureDetector(
+              onTap: () => setState(() => _sidebarOpen = false),
+              child: Container(color: Colors.black38),
+            ),
+          if (!isWide)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              left: _sidebarOpen ? 0 : -sidebarWidth,
+              top: 0,
+              bottom: 0,
+              child: Material(
+                elevation: 8,
+                child: _buildSidebar(isWide, width: sidebarWidth),
+              ),
+            ),
           // overlay when profile open
           if (_profileOpen)
             GestureDetector(
@@ -731,9 +750,9 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildSidebar(bool isWide) {
+  Widget _buildSidebar(bool isWide, {double width = 260}) {
     return Container(
-      width: 260,
+      width: width,
       color: const Color(0xFFEFF8EE),
       child: SafeArea(
         child: Column(
@@ -802,7 +821,12 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildSessionTile(_Session s) {
     final isActive = _active?.id == s.id;
     return GestureDetector(
-      onTap: () => _selectSession(s),
+      onTap: () {
+        _selectSession(s);
+        if (MediaQuery.of(context).size.width < 700) {
+          setState(() => _sidebarOpen = false);
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
