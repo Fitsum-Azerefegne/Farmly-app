@@ -5,8 +5,9 @@ import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_footer.dart';
-import '../../onboarding/pages/profile_setup_page.dart';
+import '../../onboarding/pages/onboarding_location_page.dart';
 import '../../chat/pages/chat_page.dart';
+import '../../../../data/datasources/local/auth_local_storage.dart';
 import 'forgot_password_page.dart';
 import 'register_page.dart';
 
@@ -46,7 +47,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     final fullPhone = '2519$digits';
-    setState(() { _isLoading = true; _hasError = false; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
     try {
       http.Response? lastResp;
       for (final base in ['http://localhost:8000', 'http://10.0.2.2:8000']) {
@@ -66,24 +71,28 @@ class _LoginPageState extends State<LoginPage> {
             final token = data['access_token'] as String;
             final user = data['user'] as Map<String, dynamic>;
             final onboardingDone = user['onboarding_completed'] == true;
-            if (onboardingDone) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => ChatPage(accessToken: token)),
-                (_) => false,
-              );
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProfileSetupPage(
-                    accessToken: token,
-                    fullName: (user['full_name'] as String?) ?? '',
-                    phoneNumber: fullPhone,
+              if (onboardingDone) {
+                await AuthLocalStorage().saveToken(token);
+                if (!mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => ChatPage(accessToken: token)),
+                  (_) => false,
+                );
+              } else {
+                await AuthLocalStorage().saveToken(token);
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OnboardingLocationPage(
+                      accessToken: token,
+                      fullName: (user['full_name'] as String?) ?? '',
+                      phoneNumber: fullPhone,
+                    ),
                   ),
-                ),
-              );
-            }
+                );
+              }
             return;
           }
           // got a real response (4xx/5xx) — no need to try next base
@@ -164,7 +173,9 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: _hasError ? Colors.red : Colors.grey.shade300,
+                                color: _hasError
+                                    ? Colors.red
+                                    : Colors.grey.shade300,
                                 width: _hasError ? 1.5 : 1,
                               ),
                             ),
@@ -212,14 +223,21 @@ class _LoginPageState extends State<LoginPage> {
                             controller: passwordController,
                             obscureText: _obscurePassword,
                             onChanged: (_) {
-                              if (_hasError) setState(() { _hasError = false; _errorMessage = null; });
+                              if (_hasError) {
+                                setState(() {
+                                  _hasError = false;
+                                  _errorMessage = null;
+                                });
+                              }
                             },
                             decoration: InputDecoration(
                               hintText: 'Your password',
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: _hasError ? Colors.red : Colors.grey.shade300,
+                                  color: _hasError
+                                      ? Colors.red
+                                      : Colors.grey.shade300,
                                   width: _hasError ? 1.5 : 1,
                                 ),
                               ),
@@ -232,40 +250,43 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                           ),
-                          if (_errorMessage != null) ...[  
+                          if (_errorMessage != null) ...[
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                                const Icon(Icons.error_outline,
+                                    color: Colors.red, size: 16),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                                    style: const TextStyle(
+                                        color: Colors.red, fontSize: 13),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const ForgotPasswordPage()),
-                                ),
-                                child: const Text(
-                                  'Forgot password?',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
+                          ],
+
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordPage()),
+                              ),
+                              child: const Text(
+                                'Forgot password?',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
-                          ],
+                          ),
                           const SizedBox(height: 18),
 
                           _isLoading

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -24,14 +24,14 @@ def _normalize_crops(values: list[str]) -> list[str]:
 
 
 class OnboardingCompleteRequest(BaseModel):
-    full_name: str = Field(min_length=2, max_length=150)
+    full_name: str | None = Field(default=None, max_length=150)
     phone_number: str | None = Field(default=None, max_length=30)
     location: str = Field(min_length=2, max_length=255)
     preferred_language: str = Field(min_length=2, max_length=20)
     user_type: UserType
     years_experience: int = Field(ge=0, le=80)
     main_goal: MainGoal
-    crops_grown: list[str] = Field(default=[], max_length=30)
+    crops_grown: list[str] = Field(default_factory=list)
 
     @field_validator("crops_grown")
     @classmethod
@@ -47,17 +47,14 @@ class ProfileUpdateRequest(BaseModel):
     user_type: UserType | None = None
     years_experience: int | None = Field(default=None, ge=0, le=80)
     main_goal: MainGoal | None = None
-    crops_grown: list[str] | None = Field(default=None, min_length=1, max_length=30)
+    crops_grown: list[str] | None = None  # None = don't touch; [] = clear crops
 
     @field_validator("crops_grown")
     @classmethod
     def validate_crops(cls, value: list[str] | None) -> list[str] | None:
         if value is None:
             return None
-        normalized = _normalize_crops(value)
-        if not normalized:
-            raise ValueError("At least one crop is required")
-        return normalized
+        return _normalize_crops(value)
 
 
 class ProfileResponse(BaseModel):
@@ -74,4 +71,3 @@ class ProfileResponse(BaseModel):
     onboarding_completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
-

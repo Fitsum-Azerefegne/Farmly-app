@@ -1,6 +1,4 @@
 from datetime import datetime, timezone
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -21,6 +19,23 @@ from src.services.chat_orchestrator import run_chat_orchestrator
 
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
+
+
+def _generate_title_from_text(text: str, max_len: int = 40) -> str:
+    s = " ".join(text.split())
+    # try to get first sentence ending with .!? else fallback to full text
+    import re
+
+    m = re.search(r"(.+?[.!?])\\s", s + " ")
+    if m:
+        candidate = m.group(1).strip()
+    else:
+        candidate = s.strip()
+    if not candidate:
+        return "New chat"
+    if len(candidate) > max_len:
+        return candidate[: max_len - 3].rstrip() + "..."
+    return candidate
 
 
 def _to_session_response(session: ChatSession) -> ChatSessionResponse:
@@ -44,11 +59,11 @@ def _to_message_response(message: ChatMessage) -> ChatMessageResponse:
     )
 
 
-def _get_owned_session(db: Session, session_id: UUID, user_id: str) -> ChatSession | None:
+def _get_owned_session(db: Session, session_id: str, user_id: str) -> ChatSession | None:
     return (
         db.query(ChatSession)
         .filter(
-            ChatSession.session_id == str(session_id),
+            ChatSession.session_id == session_id,
             ChatSession.user_id == user_id,
         )
         .first()
@@ -92,7 +107,7 @@ def list_my_sessions(
 
 @router.get("/sessions/{session_id}/messages", response_model=list[ChatMessageResponse])
 def get_session_messages(
-    session_id: UUID,
+    session_id: str,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -118,7 +133,7 @@ def get_session_messages(
 
 @router.post("/sessions/{session_id}/messages", response_model=ChatSendResponse)
 def send_message(
-    session_id: UUID,
+    session_id: str,
     message: str | None = Form(default=None),
     image: UploadFile | None = File(default=None),
     current_user: User = Depends(get_current_user),
@@ -186,6 +201,11 @@ def send_message(
         sequence_no=next_seq + 1,
     )
     db.add(assistant_message)
+    # If session still has a default title, generate one from the first user message
+    if (not session.title) or session.title.strip().lower() in ("new chat", "new chat"):
+        # only update title when this session had no meaningful title yet
+        generated = _generate_title_from_text(user_content)
+        session.title = generated
 
     session.updated_at = datetime.now(timezone.utc)
     db.commit()
@@ -196,13 +216,14 @@ def send_message(
         session_id=session.session_id,
         user_message=_to_message_response(user_message),
         assistant_message=_to_message_response(assistant_message),
+        session_title=session.title,
         chosen_route=chosen_route,
     )
 
 
 @router.patch("/sessions/{session_id}", response_model=ChatSessionResponse)
 def rename_session(
-    session_id: UUID,
+    session_id: str,
     payload: ChatSessionUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -230,7 +251,7 @@ def rename_session(
 
 @router.delete("/sessions/{session_id}", response_model=ChatDeleteResponse)
 def delete_session(
-    session_id: UUID,
+    session_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ChatDeleteResponse:
@@ -241,7 +262,7 @@ def delete_session(
             detail="Chat session not found",
         )
 
-    deleted_id = UUID(session.session_id)
+    deleted_id = session.session_id
     db.delete(session)
     db.commit()
     return ChatDeleteResponse(

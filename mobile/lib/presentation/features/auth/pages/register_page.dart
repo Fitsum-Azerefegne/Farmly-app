@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
+import '../../../../data/datasources/local/auth_local_storage.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_footer.dart';
-import '../../onboarding/pages/profile_setup_page.dart';
+import '../../onboarding/pages/onboarding_location_page.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -82,11 +83,15 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
     if (digits.length != 8) {
-      setState(() => _errorMessage = 'Please enter a valid 8-digit phone number.');
+      setState(
+          () => _errorMessage = 'Please enter a valid 8-digit phone number.');
       return;
     }
     _fullPhone = '2519$digits';
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final resp = await _post('/api/auth/request-otp', {
         'full_name': name,
@@ -94,7 +99,8 @@ class _RegisterPageState extends State<RegisterPage> {
       });
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -105,7 +111,8 @@ class _RegisterPageState extends State<RegisterPage> {
           _errorMessage = null;
         });
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Failed to send OTP.'));
+        setState(
+            () => _errorMessage = _extractError(resp, 'Failed to send OTP.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -119,7 +126,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _errorMessage = 'Please enter the OTP code.');
       return;
     }
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final resp = await _post('/api/auth/verify-otp', {
         'phone_number': _fullPhone,
@@ -127,7 +137,8 @@ class _RegisterPageState extends State<RegisterPage> {
       });
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -138,7 +149,8 @@ class _RegisterPageState extends State<RegisterPage> {
           _errorMessage = null;
         });
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Invalid or expired OTP.'));
+        setState(() =>
+            _errorMessage = _extractError(resp, 'Invalid or expired OTP.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -156,7 +168,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _errorMessage = 'Passwords do not match.');
       return;
     }
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final resp = await _post('/api/auth/set-password', {
         'phone_number': _fullPhone,
@@ -165,16 +180,19 @@ class _RegisterPageState extends State<RegisterPage> {
       });
       if (!mounted) return;
       if (resp == null) {
-        setState(() => _errorMessage = 'Unable to reach server. Please try again.');
+        setState(
+            () => _errorMessage = 'Unable to reach server. Please try again.');
         return;
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body);
         final token = data['access_token'] as String;
+        await AuthLocalStorage().saveToken(token);
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => ProfileSetupPage(
+            builder: (_) => OnboardingLocationPage(
               accessToken: token,
               fullName: _nameController.text.trim(),
               phoneNumber: _fullPhone,
@@ -182,7 +200,8 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       } else {
-        setState(() => _errorMessage = _extractError(resp, 'Failed to create account.'));
+        setState(() =>
+            _errorMessage = _extractError(resp, 'Failed to create account.'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -202,7 +221,10 @@ class _RegisterPageState extends State<RegisterPage> {
           icon: const Icon(Icons.arrow_back, color: AppColors.darkPrimary),
           onPressed: () {
             if (_step > 1) {
-              setState(() { _step--; _errorMessage = null; });
+              setState(() {
+                _step--;
+                _errorMessage = null;
+              });
             } else {
               Navigator.pop(context);
             }
@@ -253,9 +275,11 @@ class _RegisterPageState extends State<RegisterPage> {
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800)),
                           const SizedBox(height: 8),
-                          const Text('Choose a strong password for your account.',
+                          const Text(
+                              'Choose a strong password for your account.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: AppColors.muted)),
+                              style: TextStyle(
+                                  fontSize: 14, color: AppColors.muted)),
                           const SizedBox(height: 24),
                           TextField(
                             controller: _passwordController,
@@ -294,11 +318,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                          const Icon(Icons.error_outline,
+                              color: Colors.red, size: 16),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(_errorMessage!,
-                                style: const TextStyle(color: Colors.red, fontSize: 13)),
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 13)),
                           ),
                         ],
                       ),
@@ -356,7 +382,8 @@ class _RegisterPageState extends State<RegisterPage> {
               width: active ? 28 : 10,
               height: 10,
               decoration: BoxDecoration(
-                color: (active || done) ? AppColors.primary : Colors.grey.shade300,
+                color:
+                    (active || done) ? AppColors.primary : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(5),
               ),
             ),
@@ -394,9 +421,11 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 child: const Text('+2519',
-                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: Colors.black87, fontWeight: FontWeight.w600)),
               ),
               Expanded(
                 child: TextField(
@@ -405,14 +434,16 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: const InputDecoration(
                     hintText: '0000-0000',
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
                   onChanged: (v) {
                     final formatted = _formatLocal(v);
                     if (formatted != _phoneController.text) {
                       _phoneController.value = TextEditingValue(
                         text: formatted,
-                        selection: TextSelection.collapsed(offset: formatted.length),
+                        selection:
+                            TextSelection.collapsed(offset: formatted.length),
                       );
                     }
                     _clearError();
@@ -447,7 +478,8 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.bug_report, size: 14, color: Color(0xFFF57F17)),
+                const Icon(Icons.bug_report,
+                    size: 14, color: Color(0xFFF57F17)),
                 const SizedBox(width: 6),
                 Text('Dev OTP: $_debugOtp',
                     style: const TextStyle(
@@ -469,7 +501,8 @@ class _RegisterPageState extends State<RegisterPage> {
           decoration: InputDecoration(
             counterText: '',
             hintText: '------',
-            hintStyle: TextStyle(letterSpacing: 10, color: Colors.grey.shade400),
+            hintStyle:
+                TextStyle(letterSpacing: 10, color: Colors.grey.shade400),
           ),
           onChanged: (_) => _clearError(),
         ),
@@ -477,9 +510,8 @@ class _RegisterPageState extends State<RegisterPage> {
         TextButton(
           onPressed: _isLoading ? null : _requestOtp,
           child: const Text('Resend code',
-              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w600)),
         ),
       ];
-
-
 }

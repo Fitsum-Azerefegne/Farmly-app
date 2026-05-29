@@ -5,21 +5,35 @@ class AuthRepositoryImpl {
 
   AuthRepositoryImpl(this.remote);
 
-  Future<void> login({
-    required String phone,
+  Future<Map<String, dynamic>> login({
+    required String phoneNumber,
     required String password,
-  }) async {
-    await remote.login(phone: phone, password: password);
+  }) {
+    return remote.login(phoneNumber: phoneNumber, password: password);
   }
 
-  Future<void> register({
-    required String name,
-    required String phone,
+  Future<String?> requestOtp({
+    required String fullName,
+    required String phoneNumber,
+  }) {
+    return remote.requestOtp(fullName: fullName, phoneNumber: phoneNumber);
+  }
+
+  Future<String> verifyOtp({
+    required String phoneNumber,
+    required String otpCode,
+  }) {
+    return remote.verifyOtp(phoneNumber: phoneNumber, otpCode: otpCode);
+  }
+
+  Future<Map<String, dynamic>> setPassword({
+    required String phoneNumber,
+    required String setupToken,
     required String password,
-  }) async {
-    await remote.register(
-      name: name,
-      phone: phone,
+  }) {
+    return remote.setPassword(
+      phoneNumber: phoneNumber,
+      setupToken: setupToken,
       password: password,
     );
   }

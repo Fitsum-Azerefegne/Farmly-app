@@ -22,7 +22,9 @@ def _split_crops(value: str | None) -> list[str]:
     return [crop.strip() for crop in value.split(",") if crop.strip()]
 
 
-def _join_crops(crops: list[str]) -> str:
+def _join_crops(crops: list[str]) -> str | None:
+    if not crops:
+        return None
     return ",".join(crops)
 
 
@@ -60,8 +62,10 @@ def complete_onboarding(
         profile = UserProfile(user_id=current_user.user_id)
         db.add(profile)
 
-    profile.full_name = payload.full_name
-    profile.phone_number = payload.phone_number
+    if payload.full_name is not None:
+        profile.full_name = payload.full_name
+    if payload.phone_number is not None:
+        profile.phone_number = payload.phone_number
     profile.location = payload.location
     profile.preferred_language = payload.preferred_language
     profile.user_type = payload.user_type
@@ -116,8 +120,10 @@ def update_my_profile(
             detail="Phone number cannot be updated from this endpoint. Use phone-change flow.",
         )
 
-    if "crops_grown" in updates and updates["crops_grown"] is not None:
-        updates["crops_grown"] = _join_crops(updates["crops_grown"])
+    if "crops_grown" in updates:
+        # None means field was not sent (excluded_unset handles this already)
+        # list (including []) means explicitly set — store as CSV or None
+        updates["crops_grown"] = _join_crops(updates["crops_grown"] or [])
 
     for field_name, field_value in updates.items():
         setattr(profile, field_name, field_value)

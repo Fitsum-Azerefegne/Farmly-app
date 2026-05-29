@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'presentation/features/onboarding/pages/splash_page.dart';
 import 'app/theme.dart';
+import 'app/injection_container.dart';
 
 void main() {
+  InjectionContainer.init();
   runApp(const FarmlyApp());
 }
 
