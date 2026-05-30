@@ -1,4 +1,6 @@
-const List<String> apiBases = [
-  'http://localhost:8000',
-  'http://10.0.2.2:8000',
-];
+const String apiBase = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8000',
+);
+
+const List<String> apiBases = [apiBase];
