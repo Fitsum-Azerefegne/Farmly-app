@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/onboarding_scaffold.dart';
@@ -24,6 +25,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _results = [];
   bool _isSearching = false;
+  bool _isLocating = false;
   String? _selectedAddress;
   String? _selectedCoords; // "lat,lng"
   String? _error;
@@ -75,6 +77,57 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
     });
   }
 
+  Future<void> _useCurrentLocation() async {
+    setState(() {
+      _isLocating = true;
+      _error = null;
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _error = 'Turn on location services and try again.');
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        setState(() => _error = 'Location permission is needed to use GPS.');
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _error =
+            'Location permission is blocked. Enable it from browser or app settings.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+
+      final coords =
+          '${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+      setState(() {
+        _selectedCoords = coords;
+        _selectedAddress = 'Current location';
+        _searchController.text = _selectedAddress!;
+        _results = [];
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Could not get your current location.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
   void _continue() {
     if (_selectedCoords == null) return;
     Navigator.push(
@@ -102,6 +155,29 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isLocating ? null : _useCurrentLocation,
+              icon: _isLocating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location_rounded, size: 18),
+              label: Text(_isLocating ? 'Finding location...' : 'Use current location'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: Color.fromRGBO(27, 138, 62, 0.35)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
