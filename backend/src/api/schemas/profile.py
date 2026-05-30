@@ -27,7 +27,6 @@ class OnboardingCompleteRequest(BaseModel):
     full_name: str | None = Field(default=None, max_length=150)
     phone_number: str | None = Field(default=None, max_length=30)
     location: str = Field(min_length=2, max_length=255)
-    preferred_language: str = Field(min_length=2, max_length=20)
     user_type: UserType
     years_experience: int = Field(ge=0, le=80)
     main_goal: MainGoal
@@ -43,7 +42,6 @@ class ProfileUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=150)
     phone_number: str | None = Field(default=None, max_length=30)
     location: str | None = Field(default=None, min_length=2, max_length=255)
-    preferred_language: str | None = Field(default=None, min_length=2, max_length=20)
     user_type: UserType | None = None
     years_experience: int | None = Field(default=None, ge=0, le=80)
     main_goal: MainGoal | None = None
@@ -62,7 +60,6 @@ class ProfileResponse(BaseModel):
     full_name: str | None
     phone_number: str | None
     location: str | None
-    preferred_language: str | None
     user_type: str | None
     years_experience: int | None
     main_goal: str | None

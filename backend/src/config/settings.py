@@ -5,10 +5,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 DEFAULT_GOOGLE_TTS_VOICE_NAME = "en-US-Chirp3-HD-Aoede"
-DEFAULT_GOOGLE_TTS_AMHARIC_MODEL = "gemini-2.5-flash-tts"
-DEFAULT_GOOGLE_TTS_AMHARIC_VOICE_NAME = "Kore"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -54,19 +50,8 @@ class Settings(BaseSettings):
     google_cloud_location: str = "global"
     google_stt_language_code: str = "en-US"
     google_stt_model: str = "latest_short"
-    google_stt_amharic_language_code: str = "am-ET"
-    google_stt_amharic_location: str = "us"
-    google_stt_amharic_model: str = "chirp_3"
     google_tts_language_code: str = "en-US"
     google_tts_voice_name: str = DEFAULT_GOOGLE_TTS_VOICE_NAME
-    google_tts_amharic_language_code: str = "am-ET"
-    google_tts_amharic_location: str = "global"
-    google_tts_amharic_model: str = DEFAULT_GOOGLE_TTS_AMHARIC_MODEL
-    google_tts_amharic_voice_name: str = DEFAULT_GOOGLE_TTS_AMHARIC_VOICE_NAME
-    google_tts_amharic_prompt: str = (
-        "Read the following Amharic farming advice in a calm, natural Ethiopian voice. "
-        "Keep the delivery warm, clear, and easy for a farmer to follow."
-    )
     google_tts_audio_encoding: str = "MP3"
     google_tts_speaking_rate: float = Field(default=0.96, ge=0.25, le=4.0)
     voice_audio_max_bytes: int = 10 * 1024 * 1024

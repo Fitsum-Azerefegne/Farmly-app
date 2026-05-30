@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/onboarding_scaffold.dart';
-import 'onboarding_language_page.dart';
+import 'onboarding_farming_page.dart';
 
 class OnboardingLocationPage extends StatefulWidget {
   final String accessToken;
@@ -80,7 +80,7 @@ class _OnboardingLocationPageState extends State<OnboardingLocationPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => OnboardingLanguagePage(
+        builder: (_) => OnboardingFarmingPage(
           accessToken: widget.accessToken,
           fullName: widget.fullName,
           phoneNumber: widget.phoneNumber,

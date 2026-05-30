@@ -57,7 +57,6 @@ class UserProfile(Base):
     full_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     phone_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    preferred_language: Mapped[str | None] = mapped_column(String(20), nullable=True)
     user_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     main_goal: Mapped[str | None] = mapped_column(String(255), nullable=True)

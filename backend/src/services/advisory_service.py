@@ -113,7 +113,6 @@ def build_profile_context(
     data = {
         "full_name": profile.full_name or "",
         "location": location_used or "",
-        "preferred_language": profile.preferred_language or "",
         "user_type": profile.user_type or "",
         "years_experience": str(profile.years_experience) if profile.years_experience is not None else "",
         "main_goal": profile.main_goal or "",
@@ -192,6 +191,10 @@ def _candidate_matches(candidate: dict | None, keywords: tuple[str, ...]) -> boo
 
 
 def _find_sorghum_candidate(crops: list[dict]) -> dict | None:
+    top_crop = crops[0] if crops else None
+    if _candidate_matches(top_crop, SORGHUM_KEYWORDS):
+        return top_crop
+
     for crop in crops[:5]:
         if (
             _candidate_probability(crop) >= settings.plant_id_sorghum_threshold
@@ -210,9 +213,9 @@ def _is_supported_crop(candidate: dict | None) -> bool:
 def _unsupported_crop_advice(top_crop: dict | None) -> str:
     crop_name = (top_crop or {}).get("name") or (top_crop or {}).get("scientific_name") or "this plant"
     return (
-        f"Farmly identified {crop_name}, but crop-health diagnosis is currently available only for "
-        "sorghum and crops supported by Kindwise Crop.health. Please upload a clear sorghum image, "
-        "or use another supported crop image for disease diagnosis."
+        f"Farmly identified {crop_name}, but I cannot give a reliable disease diagnosis "
+        "from this photo yet. Please upload a clear, close-up photo of sorghum or another "
+        "common crop leaf with the affected area in good light."
     )
 
 

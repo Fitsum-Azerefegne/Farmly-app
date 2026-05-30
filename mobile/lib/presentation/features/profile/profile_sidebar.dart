@@ -30,7 +30,6 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
   String? _userType;
   int _years = 0;
   String? _mainGoal;
-  String _lang = 'en';
   bool _loading = true;
   bool _saving = false;
 
@@ -72,7 +71,6 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
               if (c is String) _crops.add(c);
             }
           }
-          _lang = d['preferred_language'] ?? 'en';
           break;
         }
       }
@@ -89,7 +87,6 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
         final body = <String, dynamic>{
           'full_name': _full.text.trim(),
           'location': _location.text.trim(),
-          'preferred_language': _lang,
           'user_type': _userType,
           'years_experience': _years,
           'main_goal': _mainGoal,
@@ -100,7 +97,6 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
         final r = await http.patch(Uri.parse('$base/api/users/me/profile'),
             headers: _headers, body: jsonEncode(body));
         if (r.statusCode == 200) {
-          // language persistence removed; accept server value
           saved = true;
           break;
         }
@@ -290,18 +286,6 @@ class _ProfileSidebarState extends State<ProfileSidebar> {
                                       .toList(),
                                 ),
                               ],
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                initialValue: _lang == 'en' ? 'en' : 'en',
-                                items: const [
-                                  DropdownMenuItem(
-                                      value: 'en', child: Text('English')),
-                                ],
-                                onChanged: (v) =>
-                                    setState(() => _lang = v ?? 'en'),
-                                decoration: const InputDecoration(
-                                    labelText: 'Language'),
-                              ),
                               const SizedBox(height: 20),
                               Row(
                                 children: [

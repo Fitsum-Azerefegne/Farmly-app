@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -14,6 +15,7 @@ import '../../../shared/app_button.dart';
 
 import '../../../../core/toast.dart';
 import '../../profile/profile_sidebar.dart';
+import '../voice/voice_controller.dart';
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -167,6 +169,7 @@ class _ChatPageState extends State<ChatPage> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _renameCtrl = TextEditingController();
+  final _voiceCtrl = VoiceController();
 
   List<_Session> _sessions = [];
   _Session? _active;
@@ -175,6 +178,9 @@ class _ChatPageState extends State<ChatPage> {
   bool _loadingMessages = false;
   bool _sending = false;
   bool _typing = false;
+  bool _recording = false;
+  bool _voiceBusy = false;
+  String? _speakingMessageId;
   XFile? _pickedImage;
   bool _sidebarOpen = true;
   bool _profileOpen = false;
@@ -198,6 +204,7 @@ class _ChatPageState extends State<ChatPage> {
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     _renameCtrl.dispose();
+    _voiceCtrl.dispose();
     super.dispose();
   }
 
@@ -357,7 +364,7 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<void> _send() async {
+  Future<void> _send({bool speakResponse = false}) async {
     final text = _msgCtrl.text.trim();
     final img = _pickedImage;
     if (text.isEmpty && img == null) return;
@@ -405,8 +412,12 @@ class _ChatPageState extends State<ChatPage> {
           req.headers.addAll(_headers);
           req.fields['message'] = text;
           final bytes = await img.readAsBytes();
-          req.files.add(
-              http.MultipartFile.fromBytes('image', bytes, filename: img.name));
+          req.files.add(http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: img.name,
+            contentType: _imageMediaType(img),
+          ));
           final streamed = await req.send();
           r = await http.Response.fromStream(streamed);
           break;
@@ -424,12 +435,14 @@ class _ChatPageState extends State<ChatPage> {
     if (r != null && r.statusCode == 200) {
       try {
         final data = jsonDecode(r.body);
+        _Msg? assistantMessage;
         setState(() {
           if (data['user_message'] != null) {
             _messages.add(_Msg.fromJson(data['user_message']));
           }
           if (data['assistant_message'] != null) {
-            _messages.add(_Msg.fromJson(data['assistant_message']));
+            assistantMessage = _Msg.fromJson(data['assistant_message']);
+            _messages.add(assistantMessage!);
           }
           // update session title if backend generated one
           if (data['session_title'] != null && _active != null) {
@@ -442,6 +455,9 @@ class _ChatPageState extends State<ChatPage> {
           }
         });
         _scrollToBottom();
+        if (speakResponse && assistantMessage != null) {
+          await _speakMessage(assistantMessage!);
+        }
       } catch (_) {
         Toast.show(context, 'Invalid response from server');
       }
@@ -452,6 +468,152 @@ class _ChatPageState extends State<ChatPage> {
       } else {
         Toast.show(context, 'Send failed');
       }
+    }
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_voiceBusy || _sending) return;
+    if (!_voiceCtrl.isSupported) {
+      Toast.show(context, 'Voice recording is not supported in this browser');
+      return;
+    }
+
+    if (!_recording) {
+      try {
+        await _voiceCtrl.startRecording();
+        if (mounted) setState(() => _recording = true);
+      } catch (e) {
+        if (mounted) Toast.show(context, 'Could not start recording: $e');
+      }
+      return;
+    }
+
+    setState(() {
+      _recording = false;
+      _voiceBusy = true;
+    });
+    try {
+      final audio = await _voiceCtrl.stopRecording();
+      if (audio == null || audio.bytes.isEmpty) {
+        if (mounted) Toast.show(context, 'No audio was recorded');
+        return;
+      }
+      await _sendVoice(audio);
+    } catch (e) {
+      if (mounted) Toast.show(context, 'Voice message failed: $e');
+    } finally {
+      if (mounted) setState(() => _voiceBusy = false);
+    }
+  }
+
+  Future<void> _sendVoice(RecordedAudio audio) async {
+    http.Response? r;
+    for (final base in _bases) {
+      try {
+        final req = http.MultipartRequest(
+          'POST',
+          Uri.parse('$base/api/voice/transcribe'),
+        );
+        req.headers.addAll(_headers);
+        req.files.add(http.MultipartFile.fromBytes(
+          'audio',
+          audio.bytes,
+          filename: audio.fileName,
+          contentType: _mediaType(audio.mimeType),
+        ));
+        final streamed = await req.send();
+        r = await http.Response.fromStream(streamed);
+        break;
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    if (r == null) {
+      Toast.show(context, 'Unable to reach voice service');
+      return;
+    }
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      Toast.show(context, _extractError(r, 'Voice transcription failed'));
+      return;
+    }
+
+    final data = jsonDecode(r.body) as Map<String, dynamic>;
+    final transcript = (data['transcript'] as String? ?? '').trim();
+    if (transcript.isEmpty) {
+      Toast.show(context, 'No speech was detected');
+      return;
+    }
+    _msgCtrl.text = transcript;
+    await _send(speakResponse: true);
+  }
+
+  Future<void> _speakMessage(_Msg msg) async {
+    if (msg.sender == 'user' || msg.content.trim().isEmpty) return;
+    if (_speakingMessageId == msg.id) {
+      _voiceCtrl.stopPlayback();
+      setState(() => _speakingMessageId = null);
+      return;
+    }
+
+    setState(() => _speakingMessageId = msg.id);
+    try {
+      http.Response? r;
+      for (final base in _bases) {
+        try {
+          r = await http.post(
+            Uri.parse('$base/api/voice/synthesize'),
+            headers: {..._headers, 'Content-Type': 'application/json'},
+            body: jsonEncode({'text': msg.content}),
+          );
+          break;
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      if (r == null) {
+        Toast.show(context, 'Unable to reach voice service');
+        return;
+      }
+      if (r.statusCode < 200 || r.statusCode >= 300) {
+        Toast.show(context, _extractError(r, 'Voice playback failed'));
+        return;
+      }
+      await _voiceCtrl.playAudio(r.bodyBytes, 'audio/mpeg');
+    } catch (e) {
+      if (mounted) Toast.show(context, 'Voice playback failed: $e');
+    } finally {
+      if (mounted && _speakingMessageId == msg.id) {
+        setState(() => _speakingMessageId = null);
+      }
+    }
+  }
+
+  MediaType? _mediaType(String value) {
+    final parts = value.split(';').first.split('/');
+    if (parts.length != 2) return null;
+    return MediaType(parts[0], parts[1]);
+  }
+
+  MediaType _imageMediaType(XFile image) {
+    final mimeType = image.mimeType;
+    if (mimeType != null && mimeType.startsWith('image/')) {
+      return _mediaType(mimeType) ?? MediaType('image', 'jpeg');
+    }
+
+    final name = image.name.toLowerCase();
+    if (name.endsWith('.png')) return MediaType('image', 'png');
+    if (name.endsWith('.webp')) return MediaType('image', 'webp');
+    if (name.endsWith('.gif')) return MediaType('image', 'gif');
+    return MediaType('image', 'jpeg');
+  }
+
+  String _extractError(http.Response resp, String fallback) {
+    try {
+      final data = jsonDecode(resp.body);
+      final detail = data['detail'];
+      if (detail is String) return detail;
+      return data['message']?.toString() ?? fallback;
+    } catch (_) {
+      return fallback;
     }
   }
 
@@ -918,6 +1080,28 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                 ),
               ),
+              if (!isUser) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _speakMessage(msg),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: Color.fromRGBO(27, 138, 62, 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _speakingMessageId == msg.id
+                          ? Icons.stop_rounded
+                          : Icons.volume_up_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
               if (isUser) const SizedBox(width: 8),
               if (isUser) ...[
                 const SizedBox(width: 4),
@@ -1104,6 +1288,39 @@ class _ChatPageState extends State<ChatPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    InkWell(
+                      onTap: (_active == null || _voiceBusy || _sending)
+                          ? null
+                          : _toggleRecording,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _recording
+                              ? Colors.red.shade50
+                              : const Color.fromRGBO(27, 138, 62, 0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: _voiceBusy
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : Icon(
+                                _recording
+                                    ? Icons.stop_rounded
+                                    : Icons.mic_none_rounded,
+                                color:
+                                    _recording ? Colors.red : AppColors.primary,
+                                size: 20,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     _sending
                         ? const SizedBox(
                             width: 40,

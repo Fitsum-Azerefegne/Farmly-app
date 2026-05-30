@@ -18,7 +18,6 @@ class ProfileModal extends StatefulWidget {
 class _ProfileModalState extends State<ProfileModal> {
   final _full = TextEditingController();
   final _phone = TextEditingController();
-  String _lang = 'en';
   bool _loading = true;
   bool _saving = false;
 
@@ -44,7 +43,6 @@ class _ProfileModalState extends State<ProfileModal> {
           final d = jsonDecode(r.body);
           _full.text = d['full_name'] ?? '';
           _phone.text = d['phone_number'] ?? '';
-          _lang = d['preferred_language'] ?? 'en';
           break;
         }
       }
@@ -61,10 +59,8 @@ class _ProfileModalState extends State<ProfileModal> {
             headers: _headers,
             body: jsonEncode({
               'full_name': _full.text.trim(),
-              'preferred_language': _lang,
             }));
         if (r.statusCode == 200) {
-          // language persistence removed; keep server value
           saved = true;
           break;
         }
@@ -112,15 +108,6 @@ class _ProfileModalState extends State<ProfileModal> {
                       decoration:
                           const InputDecoration(labelText: 'Phone number'),
                       enabled: false),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: _lang == 'en' ? 'en' : 'en',
-                    items: const [
-                      DropdownMenuItem(value: 'en', child: Text('English')),
-                    ],
-                    onChanged: (v) => setState(() => _lang = v ?? 'en'),
-                    decoration: const InputDecoration(labelText: 'Language'),
-                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
